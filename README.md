@@ -35,8 +35,7 @@ claude plugin marketplace add kiemthuvien-enshu-1804/qa-skill
 claude plugin install web-qa@enshu-qa
 claude plugin install app-qa@enshu-qa   # nếu làm webapp
 ```
-Sau đó **bật cập nhật tự động**: gõ `claude` → `/plugin` → **Marketplaces** → `enshu-qa` → **Enable auto-update**.
-Claude Code mặc định không tự cập nhật marketplace bên thứ ba, nên mỗi người phải bật một lần. Chưa bật thì cập nhật tay theo mục [Cập nhật plugin](#cập-nhật-plugin).
+Khi owner báo có bản mới, cập nhật theo mục [Cập nhật plugin](#cập-nhật-plugin).
 
 - Repo private: máy phải có sẵn quyền đọc repo (SSH key trong ssh-agent, hoặc `gh auth login` + `gh auth setup-git`), vì Claude Code không hỏi mật khẩu khi clone.
 - Máy không có SSH key GitHub: đặt biến môi trường `CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`.
@@ -62,8 +61,11 @@ Extension VS Code không có lệnh `claude` trong terminal. Nếu gõ `claude` 
   Sau đó `npm` và `claude` chạy bình thường.
 
 ## Cập nhật plugin
-Làm khi repo này có commit mới mà máy chưa bật auto-update, hoặc khi skill chưa thấy thay đổi mới.
+Làm khi owner báo có bản mới, hoặc khi skill chưa thấy thay đổi mới.
 
+**Cách nhanh trong VS Code:** trang Plugins → tab **Marketplaces** → bấm **↻** ở `enshu-qa`, rồi `Ctrl+Shift+P` → **Developer: Reload Window**.
+
+**Cách dùng terminal:**
 1. Mở terminal PowerShell (cần CLI, xem mục trên).
 2. Kéo bản mới của marketplace:
    ```powershell
@@ -100,7 +102,7 @@ claude plugin install web-qa@enshu-qa
 ## Sửa kit và phát hành
 - Sửa skill/script trong repo này, không sửa trong thư mục dự án hay trong cache plugin (`~/.claude/plugins/cache/...` bị ghi đè khi cập nhật).
 - Thử trước khi push: trong một thư mục QA, chạy `claude --plugin-dir <repo>/plugins/web-qa` (hoặc `.../app-qa`) để dùng bản đang sửa. Hoặc `claude plugin validate <repo>`.
-- `plugin.json` **không có `version`**, nên mỗi commit push lên `main` là một bản mới. Máy đã bật auto-update sẽ nhận ở lần mở Claude Code tiếp theo.
+- `plugin.json` **không có `version`**, nên mỗi commit push lên `main` là một bản mới. Push xong thì báo team cập nhật theo mục [Cập nhật plugin](#cập-nhật-plugin).
 - Đổi tên plugin `web-qa`/`app-qa` hoặc marketplace `enshu-qa` sẽ làm hỏng cài đặt của mọi dự án. Đổi tên hiển thị thì dùng `displayName`.
 - Thêm field cấu hình mới: cập nhật `plugins/<plugin>/templates/project/qa-config.example.json`. Script phải chạy được khi dự án cũ chưa có field đó.
 
@@ -118,3 +120,13 @@ claude plugin install web-qa@enshu-qa
 | `qa-checklist-excel` | điền checklist Excel + prompt cho tester |
 | `qa-chrome-verify` | phần tester: Claude in Chrome kiểm nốt / verify |
 | `qa-verify-regression` | chạy lại sau khi dev fix |
+
+## Skill của app-qa
+| Skill | Việc |
+|---|---|
+| `app-qa` | điều phối toàn bộ, init/doctor thư mục QA webapp |
+| `app-testcase` | thiết kế test case từ đặc tả + mockup → TestDesign.md + TestCase.csv, import TestRail |
+| `app-testdata` | script SQL/API tạo dữ liệu test (TD-xx) + cleanup |
+| `app-run-test` | chạy Test Run bằng Playwright, ảnh evidence/TC, ghi kết quả lên TestRail |
+| `app-bug-backlog` | TC FAIL → bản nháp bug (ảnh khung đỏ) → duyệt → tạo issue Backlog |
+| `app-verify-bug` | verify bug sau khi dev fix → đóng/reopen trên Backlog |
