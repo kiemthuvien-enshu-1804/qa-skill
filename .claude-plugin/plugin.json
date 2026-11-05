@@ -1,0 +1,8 @@
+{
+  "name": "web-qa",
+  "displayName": "Web QA Kit",
+  "description": "Bộ QA website dùng chung: Figma spec, pixel, responsive, CMS data/seed, logic flow, bug tracker, checklist Excel (Playwright + Claude Code). Dữ liệu dự án nằm ở thư mục QA riêng của từng dự án.",
+  "author": { "name": "kiemthuvien-enshu-1804" },
+  "repository": "https://github.com/kiemthuvien-enshu-1804/qa-skill",
+  "keywords": ["qa", "playwright", "figma", "microcms", "checklist"]
+}

@@ -1,0 +1,28 @@
+{
+  "_readme": "Mẫu dữ liệu test cho trang list + detail (news/blog). Copy sang cms-seed/news.seed.json rồi đổi: endpoint, tên field theo schema API của dự án, số bài theo pageSize của trang (mẫu giả định 10 bài/trang), vars.image. Mỗi bài tự gắn nhãn [<PREFIX><số>] ở đầu field prefixField. Token: $ref:<key>, {label}, {jp:N}, {days:-N}, {days:-N@HH:MM} (giờ Nhật), {var:name}.",
+  "endpoint": "/news",
+  "prefixField": "title",
+  "numberStart": 1,
+  "vars": {
+    "image": "<URL ảnh đã upload vào media microCMS của service dev — https://images.microcms-assets.io/assets/...>"
+  },
+  "items": [
+    { "key": "cat-a", "endpoint": "/categories", "prefixField": "name", "purpose": "Category có bài", "fields": { "name": "お知らせ" } },
+    { "key": "cat-b", "endpoint": "/categories", "prefixField": "name", "purpose": "Category có bài", "fields": { "name": "イベント" } },
+    { "key": "cat-empty", "endpoint": "/categories", "prefixField": "name", "purpose": "Category không có bài → trạng thái 0 kết quả", "fields": { "name": "空カテゴリ" } },
+
+    { "key": "figma", "noPrefix": true, "purpose": "Text giống hệt Figma (không nhãn) → dùng cho pixel-check. Thay title/ảnh bằng nội dung mẫu trong Figma", "fields": { "title": "<Tiêu đề mẫu trong Figma>", "category": "$ref:cat-a", "thumbnail": "{var:image}", "content": "<p>Figma sample</p>", "publishedAt": "{days:0}" } },
+    { "key": "long-title", "purpose": "Tiêu đề rất dài → cắt dòng / 三点リーダー", "fields": { "title": "{jp:120}", "category": "$ref:cat-a", "thumbnail": "{var:image}", "content": "<p>{jp:80}</p>", "publishedAt": "{days:-1}" } },
+    { "key": "short-title", "purpose": "Tiêu đề 1 ký tự", "fields": { "title": "短", "category": "$ref:cat-b", "thumbnail": "{var:image}", "content": "<p>{jp:40}</p>", "publishedAt": "{days:-2}" } },
+    { "key": "no-image", "purpose": "Không có thumbnail → ảnh no-image", "fields": { "title": "サムネイルなしの記事", "category": "$ref:cat-a", "content": "<p>{jp:60}</p>", "publishedAt": "{days:-3}" } },
+    { "key": "jst-midnight", "purpose": "Đăng 00:10 giờ Nhật (= 15:10 UTC hôm trước) → bắt lỗi lệch ngày UTC/JST", "fields": { "title": "深夜0時10分に公開した記事", "category": "$ref:cat-b", "thumbnail": "{var:image}", "content": "<p>{jp:60}</p>", "publishedAt": "{days:-4@00:10}" } },
+    { "key": "jst-late", "purpose": "Đăng 23:50 giờ Nhật cùng ngày bài trên → thứ tự trong cùng ngày", "fields": { "title": "23時50分に公開した記事", "category": "$ref:cat-b", "thumbnail": "{var:image}", "content": "<p>{jp:60}</p>", "publishedAt": "{days:-4@23:50}" } },
+    { "key": "symbols", "purpose": "Ký tự đặc biệt / escape HTML / emoji / ｶﾀｶﾅ半角", "fields": { "title": "記号＆<b>タグ</b>\"引用\" 😀 ﾃｽﾄ ①②③", "category": "$ref:cat-a", "thumbnail": "{var:image}", "content": "<p>&lt;script&gt;alert(1)&lt;/script&gt; は文字として表示されること</p>", "publishedAt": "{days:-5}" } },
+    { "key": "rich-body", "purpose": "Detail: h2/h3, list, link, ảnh, bảng, đoạn dài", "fields": { "title": "本文の装飾確認用の記事", "category": "$ref:cat-a", "thumbnail": "{var:image}", "content": "<h2>見出し2</h2><p>{jp:150}</p><h3>見出し3</h3><ul><li>リスト1</li><li>リスト2</li></ul><ol><li>番号1</li><li>番号2</li></ol><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener\">外部リンク</a></p><p><img src=\"{var:image}\" alt=\"本文画像\"></p><table><tbody><tr><th>項目</th><td>内容</td></tr></tbody></table><p>{jp:300}</p>", "publishedAt": "{days:-6}" } },
+    { "key": "fill-7", "purpose": "Lấp cho đủ số bài/trang", "fields": { "title": "通常の記事 7", "category": "$ref:cat-b", "thumbnail": "{var:image}", "content": "<p>{jp:60}</p>", "publishedAt": "{days:-7}" } },
+    { "key": "fill-8", "purpose": "Bài thứ 10 (tính theo ngày) = vừa đủ trang 1", "fields": { "title": "通常の記事 8", "category": "$ref:cat-a", "thumbnail": "{var:image}", "content": "<p>{jp:60}</p>", "publishedAt": "{days:-8}" } },
+    { "key": "page2-first", "purpose": "Bài thứ 11 → sang trang 2 (ranh giới pagination)", "fields": { "title": "2ページ目の最初の記事", "category": "$ref:cat-a", "thumbnail": "{var:image}", "content": "<p>{jp:60}</p>", "publishedAt": "{days:-10}" } },
+    { "key": "oldest", "purpose": "Bài cũ nhất (năm trước) → format năm, cuối danh sách", "fields": { "title": "去年の記事", "category": "$ref:cat-b", "thumbnail": "{var:image}", "content": "<p>{jp:60}</p>", "publishedAt": "{days:-400}" } },
+    { "key": "draft", "status": "draft", "purpose": "Bài nháp → KHÔNG được hiện trên list/detail", "fields": { "title": "下書きの記事（表示されてはいけない）", "category": "$ref:cat-a", "thumbnail": "{var:image}", "content": "<p>{jp:60}</p>" } }
+  ]
+}

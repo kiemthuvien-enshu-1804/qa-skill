@@ -1,0 +1,20 @@
+# Bí mật — không bao giờ commit
+.env
+.env.local
+.env.*.local
+
+node_modules/
+runs/
+
+# Dữ liệu riêng của dự án. Kit dùng chung không chứa các file này.
+# Nếu repo QA của 1 dự án muốn lưu config/spec/checklist vào git → xoá các dòng dưới trong bản copy của dự án.
+qa-config.json
+specs/*
+!specs/README.md
+checklist/*
+!checklist/README.md
+!checklist/*Template*.xlsx
+flows/*
+!flows/.gitkeep
+cms-seed/*
+!cms-seed/README.md

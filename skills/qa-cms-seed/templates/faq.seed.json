@@ -1,0 +1,19 @@
+{
+  "_readme": "Mẫu dữ liệu test cho FAQ (accordion, nhóm theo category). Copy sang cms-seed/faq.seed.json, đổi endpoint + tên field theo schema API. numberStart 101 để nhãn không trùng với news ([KIM101]…).",
+  "endpoint": "/faq",
+  "prefixField": "question",
+  "numberStart": 101,
+  "items": [
+    { "key": "cat-a", "endpoint": "/faq-categories", "prefixField": "name", "purpose": "Nhóm FAQ có câu hỏi", "fields": { "name": "ご利用について" } },
+    { "key": "cat-b", "endpoint": "/faq-categories", "prefixField": "name", "purpose": "Nhóm FAQ có câu hỏi", "fields": { "name": "お支払いについて" } },
+    { "key": "cat-empty", "endpoint": "/faq-categories", "prefixField": "name", "purpose": "Nhóm không có câu hỏi → ẩn nhóm hay hiện trống? (xem Figma)", "fields": { "name": "空のカテゴリ" } },
+
+    { "key": "figma", "noPrefix": true, "purpose": "Text giống hệt Figma (không nhãn) → pixel-check", "fields": { "question": "<Câu hỏi mẫu trong Figma>", "answer": "<p><Câu trả lời mẫu trong Figma></p>", "category": "$ref:cat-a" } },
+    { "key": "long-q", "purpose": "Câu hỏi dài 2–3 dòng → icon Q / nút mở vẫn đúng vị trí", "fields": { "question": "{jp:90}？", "answer": "<p>{jp:60}</p>", "category": "$ref:cat-a" } },
+    { "key": "short-q", "purpose": "Câu hỏi rất ngắn", "fields": { "question": "料金は？", "answer": "<p>無料です。</p>", "category": "$ref:cat-a" } },
+    { "key": "long-a", "purpose": "Câu trả lời nhiều đoạn → chiều cao accordion khi mở", "fields": { "question": "回答が長い質問", "answer": "<p>{jp:200}</p><p>{jp:200}</p><p>{jp:200}</p>", "category": "$ref:cat-b" } },
+    { "key": "rich-a", "purpose": "Câu trả lời có link, list, chữ đậm", "fields": { "question": "回答にリンクやリストがある質問", "answer": "<p><strong>太字</strong>と<a href=\"https://example.com\" target=\"_blank\" rel=\"noopener\">外部リンク</a></p><ul><li>項目1</li><li>項目2</li></ul>", "category": "$ref:cat-b" } },
+    { "key": "symbols", "purpose": "Ký tự đặc biệt / escape", "fields": { "question": "記号＆<tag>\"引用\" 😀 ﾃｽﾄ", "answer": "<p>&lt;b&gt;は文字として表示されること</p>", "category": "$ref:cat-b" } },
+    { "key": "draft", "status": "draft", "purpose": "Bài nháp → KHÔNG được hiện", "fields": { "question": "下書きの質問（表示されてはいけない）", "answer": "<p>{jp:40}</p>", "category": "$ref:cat-a" } }
+  ]
+}

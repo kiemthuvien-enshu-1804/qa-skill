@@ -1,0 +1,6 @@
+# Repo plugin — không chứa dữ liệu hay bí mật dự án
+.env
+.env.local
+.env.*.local
+node_modules/
+runs/

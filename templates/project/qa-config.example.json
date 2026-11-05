@@ -1,0 +1,91 @@
+{
+  "_readme": "Mẫu cấu hình QA cho 1 dự án. Điền các giá trị <...>, xoá khối không dùng (cms, basicAuth). Kiểm tra: nhờ Claude chạy doctor (plugin web-qa)",
+
+  "project": "<tên-dự-án>",
+  "bugPrefix": "<ABC>",
+  "baseUrl": "https://<domain-site-test>",
+  "basicAuth": { "userEnv": "QA_BASIC_USER", "passEnv": "QA_BASIC_PASS" },
+
+  "figma": {
+    "url": "https://www.figma.com/design/<fileKey>/<tên-file>?node-id=<page-node>",
+    "_note": "Chỉ cần 1 link file hoặc link page Figma. Frame SP/PC của từng trang được tự tìm và lưu ở map. Khai báo pages[].figma chỉ khi muốn ghi đè.",
+    "map": "specs/figma-map.json"
+  },
+
+  "checklist": {
+    "file": "checklist/<Tên_Checklist>.xlsx",
+    "mapping": "checklist/checklist-map.json",
+    "testerUrl": ""
+  },
+  "viewports": {
+    "sp": { "width": 375, "height": 812 },
+    "pc": { "width": 1536, "height": 864 }
+  },
+  "responsive": {
+    "widths": [360, 375, 390, 414, 430, 480, 600, 768, 820, 1024, 1280, 1366, 1440, 1536, 1600, 1920],
+    "height": 900
+  },
+  "browsers": ["chromium", "msedge", "webkit"],
+  "tolerance": { "px": 1, "fontPx": 0, "colorDelta": 2 },
+
+  "cms": {
+    "name": "microCMS",
+    "baseUrl": "https://<service>.microcms.io/api/v1",
+    "headers": { "X-MICROCMS-API-KEY": "${CMS_API_KEY}" },
+    "pagination": { "style": "offset", "limitParam": "limit", "offsetParam": "offset", "pageSize": 100 },
+    "listPath": "contents",
+    "totalPath": "totalCount",
+    "seed": {
+      "_note": "qa-cms-seed (chỉ microCMS): tạo dữ liệu test. allowedHosts = host microCMS của môi trường DEV — script dừng nếu cms.baseUrl khác host này. Không seed thì xoá khối này.",
+      "allowedHosts": ["<service-dev>.microcms.io"],
+      "headers": { "X-MICROCMS-API-KEY": "${CMS_WRITE_API_KEY}" },
+      "prefix": "${QA_SEED_PREFIX}"
+    },
+    "_examples": {
+      "wordpress": { "baseUrl": "https://<site>/wp-json/wp/v2", "headers": { "Authorization": "Basic ${WP_APP_PASSWORD_B64}" }, "pagination": { "style": "page", "pageParam": "page", "perPageParam": "per_page", "pageSize": 100 }, "listPath": "", "totalHeader": "x-wp-total" },
+      "laravel-api": { "baseUrl": "https://<api-domain>/api", "headers": { "Authorization": "Bearer ${CMS_API_KEY}" }, "pagination": { "style": "page", "pageParam": "page", "perPageParam": "per_page", "pageSize": 100 }, "listPath": "data", "totalPath": "meta.total" }
+    }
+  },
+
+  "pages": [
+    {
+      "name": "top",
+      "path": "/",
+      "waitFor": "main",
+      "hideSelectors": [".cookie-banner"]
+    },
+    {
+      "name": "news",
+      "path": "/news",
+      "waitFor": "main",
+      "tags": ["zoom"],
+      "cms": {
+        "endpoint": "/news",
+        "query": { "orders": "-publishedAt" },
+        "fields": { "id": "id", "title": "title", "date": "publishedAt", "category": "category.name", "image": "thumbnail.url" },
+        "excludeIf": "",
+        "dateFormat": "YYYY.MM.DD",
+        "timezone": "Asia/Tokyo",
+        "pageSize": 10,
+        "pageUrl": "{path}?page={n}",
+        "maxPages": 5,
+        "list": { "item": ".p-news__item", "title": ".p-news__title", "date": ".p-news__date", "category": ".p-news__cat", "link": "a", "image": "img", "pagerLast": ".p-pager a" },
+        "listSp": null,
+        "noImageFallback": "noimage",
+        "detail": { "urlTemplate": "/news/{id}", "title": "h1", "date": ".p-article__date", "body": ".p-article__body", "sample": 3 },
+        "filters": [
+          { "name": "event", "url": "/news?category=event", "query": { "filters": "category[equals]event" } }
+        ]
+      }
+    },
+    {
+      "name": "contact",
+      "path": "/contact",
+      "tags": ["form", "captcha", "tracking"],
+      "chrome": [
+        { "title": "Mail trả lời tự động gửi cho người dùng và cho admin", "steps": ["Gửi form với email test", "Kiểm hộp mail test"], "expected": "Đúng mẫu mail trong spec" }
+      ]
+    }
+  ],
+  "tracker": { "url": "" }
+}

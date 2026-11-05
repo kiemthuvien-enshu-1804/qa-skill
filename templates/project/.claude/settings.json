@@ -1,0 +1,17 @@
+{
+  "extraKnownMarketplaces": {
+    "enshu-qa": {
+      "source": { "source": "github", "repo": "kiemthuvien-enshu-1804/qa-skill" }
+    }
+  },
+  "enabledPlugins": {
+    "web-qa@enshu-qa": true
+  },
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)"
+    ]
+  }
+}

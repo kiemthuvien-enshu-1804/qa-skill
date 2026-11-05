@@ -1,0 +1,12 @@
+{
+  "name": "enshu-qa",
+  "description": "Bộ QA website dùng chung (Figma + CMS ↔ website) cho các dự án",
+  "owner": { "name": "kiemthuvien-enshu-1804" },
+  "plugins": [
+    {
+      "name": "web-qa",
+      "source": "./",
+      "description": "Figma spec, pixel, responsive, CMS data/seed, logic flow, bug tracker, checklist Excel (Playwright + Claude Code)"
+    }
+  ]
+}
