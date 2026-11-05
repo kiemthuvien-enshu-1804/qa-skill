@@ -1,20 +1,24 @@
-# Web QA Kit — plugin Claude Code dùng chung (marketplace `enshu-qa`, plugin `web-qa`)
+# QA Kit — marketplace Claude Code `enshu-qa` (plugin `web-qa` + `app-qa`)
 
-Repo này là **core dùng chung**: toàn bộ skill + script QA website (Figma spec, pixel, responsive, CMS data/seed, logic flow, bug tracker, checklist Excel).
-**Không chứa dữ liệu dự án nào.** Mỗi dự án có một **thư mục QA riêng** chỉ chứa cấu hình và kết quả, rồi bật plugin này lên.
+Repo này là **core dùng chung** của 2 plugin QA. **Không chứa dữ liệu dự án nào.** Mỗi dự án có một **thư mục QA riêng** chỉ chứa cấu hình và kết quả, rồi bật plugin của mảng mình.
 
 ```
-qa-skill/  (repo này)                            qa-<dự-án>/  (mỗi dự án một thư mục)
-├─ .claude-plugin/marketplace.json, plugin.json  ├─ .claude/settings.json   bật web-qa@enshu-qa, chặn đọc .env.local
-├─ skills/        11 skill (/web-qa:web-qa …)    ├─ package.json            playwright, pixelmatch, pngjs
-├─ scripts/       script Node/Python             ├─ qa-config.json, .env.local
-└─ templates/project/  khung thư mục QA          └─ specs/ flows/ checklist/ cms-seed/ runs/
+qa-skill/  (repo này)                              qa-<dự-án>/  (mỗi dự án một thư mục)
+├─ .claude-plugin/marketplace.json  khai 2 plugin  ├─ .claude/settings.json   bật plugin, chặn đọc .env.local
+├─ plugins/                                        ├─ package.json            playwright …
+│  ├─ web-qa/   website (Figma + CMS)              ├─ qa-config.json, .env.local
+│  │  ├─ .claude-plugin/plugin.json                └─ specs/ flows/ e2e/ runs/ …
+│  │  ├─ skills/  11 skill (/web-qa:web-qa …)
+│  │  ├─ scripts/ script Node/Python
+│  │  └─ templates/project/  khung thư mục QA website
+│  └─ app-qa/   webapp (git docs + TestRail + Backlog), cấu trúc tương tự
+└─ README.md
 ```
 
 ## Hai plugin trong marketplace `enshu-qa`
 | Plugin | Dùng cho | Nguồn | Bật trong thư mục QA |
 |---|---|---|---|
-| `web-qa` | Website: design + tài liệu trên **Figma**, dữ liệu CMS, checklist Excel, Bug Tracker | `./` (repo gốc) | `"web-qa@enshu-qa": true` |
+| `web-qa` | Website: design + tài liệu trên **Figma**, dữ liệu CMS, checklist Excel, Bug Tracker | [`plugins/web-qa/`](plugins/web-qa/) | `"web-qa@enshu-qa": true` |
 | `app-qa` | Webapp: tài liệu trên **git**, mockup **Claude Design**, test case CSV → **TestRail**, bug → **Backlog** | [`plugins/app-qa/`](plugins/app-qa/) | `"app-qa@enshu-qa": true` |
 
 Hai plugin độc lập: không gọi skill hay script của nhau. Mỗi thư mục QA chỉ bật plugin của mảng mình.
@@ -37,7 +41,7 @@ Claude Code mặc định không tự cập nhật marketplace bên thứ ba, n�
 
 ## Tạo thư mục QA cho dự án mới
 1. Tạo thư mục rỗng (vd `qa-<dự-án>/`), mở bằng VS Code → Claude Code.
-2. Nói với Claude: *"tạo thư mục QA cho dự án <tên>, site https://…, mã bug ABC"*. Skill `web-qa` sẽ chạy `init` để copy khung từ `templates/project/`.
+2. Nói với Claude: *"tạo thư mục QA cho dự án <tên>, site https://…, mã bug ABC"*. Skill `web-qa` sẽ chạy `init` để copy khung từ `plugins/web-qa/templates/project/`.
 3. `npm install && npm run setup`, điền `qa-config.json` + `.env.local`, rồi nhờ Claude chạy doctor.
 4. Commit thư mục QA (nếu dự án lưu vào git). `.claude/settings.json` đã khai marketplace + plugin, nên người khác mở thư mục và trust folder là được nhắc cài plugin.
 
@@ -45,17 +49,17 @@ Claude Code mặc định không tự cập nhật marketplace bên thứ ba, n�
 1. Cài plugin như trên.
 2. Trong thư mục dự án: nhờ Claude chạy `init` để thêm `.claude/settings.json` (plugin) và làm mới file mẫu. Init không ghi đè `qa-config.json`, `.env.local`, `specs/`, `flows/`, `checklist/`, `runs/`.
 3. Xoá `.claude/skills/` cũ trong thư mục dự án, nếu không skill sẽ bị trùng (bản cũ `/web-qa` và bản plugin `/web-qa:web-qa`).
-4. `flows/*.flow.mjs` cũ import `../.claude/skills/web-qa/scripts/lib.mjs`. Đổi phần import theo `scripts/flow_template.mjs` mới (đọc `WEBQA_ROOT`).
+4. `flows/*.flow.mjs` cũ import `../.claude/skills/web-qa/scripts/lib.mjs`. Đổi phần import theo `plugins/web-qa/scripts/flow_template.mjs` mới (đọc `WEBQA_ROOT`).
 5. Trong `package.json` dự án: bỏ các script `node .claude/skills/...` (giữ `setup` + dependencies).
 
 ## Sửa kit và phát hành
 - Sửa skill/script trong repo này, không sửa trong thư mục dự án hay trong cache plugin (`~/.claude/plugins/cache/...` bị ghi đè khi cập nhật).
-- Thử trước khi push: trong một thư mục QA, chạy `claude --plugin-dir <đường-dẫn-repo-này>` để dùng bản đang sửa. Hoặc chạy `claude plugin validate <đường-dẫn-repo-này>`.
+- Thử trước khi push: trong một thư mục QA, chạy `claude --plugin-dir <repo>/plugins/web-qa` (hoặc `.../app-qa`) để dùng bản đang sửa. Hoặc `claude plugin validate <repo>`.
 - `plugin.json` **không có `version`**, nên mỗi commit push lên `main` là một bản mới. Máy đã bật auto-update sẽ nhận ở lần mở Claude Code tiếp theo.
-- Đổi tên plugin `web-qa` hoặc marketplace `enshu-qa` sẽ làm hỏng cài đặt của mọi dự án. Đổi tên hiển thị thì dùng `displayName`.
-- Thêm field cấu hình mới: cập nhật `templates/project/qa-config.example.json`. Script phải chạy được khi dự án cũ chưa có field đó.
+- Đổi tên plugin `web-qa`/`app-qa` hoặc marketplace `enshu-qa` sẽ làm hỏng cài đặt của mọi dự án. Đổi tên hiển thị thì dùng `displayName`.
+- Thêm field cấu hình mới: cập nhật `plugins/<plugin>/templates/project/qa-config.example.json`. Script phải chạy được khi dự án cũ chưa có field đó.
 
-## Skill
+## Skill của web-qa
 | Skill | Việc |
 |---|---|
 | `web-qa` | điều phối toàn bộ, init/doctor thư mục QA |

@@ -5,7 +5,7 @@
   "plugins": [
     {
       "name": "web-qa",
-      "source": "./",
+      "source": "./plugins/web-qa",
       "description": "Website: Figma spec, pixel, responsive, CMS data/seed, logic flow, bug tracker, checklist Excel (Playwright + Claude Code)"
     },
     {
