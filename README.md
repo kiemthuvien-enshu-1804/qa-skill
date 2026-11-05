@@ -27,17 +27,62 @@ Key TestRail/Backlog của `app-qa` là key **cá nhân**, để ở `~/.app-qa/
 Quy trình và rule của `app-qa` lấy từ `07_Testing` của dự án Entoly (`RULES/01–04`). Rule của dự án (trong repo docs) được ưu tiên hơn bản mặc định trong `plugins/app-qa/templates/rules/`.
 
 ## Cài lần đầu (mỗi máy, 1 lần)
-Trong Claude Code (terminal hoặc VS Code):
+> Lệnh `/plugin` **không chạy trong khung chat của extension VS Code** (báo *"/plugin isn't available in this environment"*). Hãy dùng Claude Code CLI trong terminal: cài CLI theo mục [Cài Claude Code CLI trên Windows](#cài-claude-code-cli-trên-windows), rồi chạy lệnh `claude plugin ...` bên dưới, hoặc gõ `claude` để vào chế độ tương tác rồi dùng `/plugin`.
+
+Trong terminal (PowerShell):
+```powershell
+claude plugin marketplace add kiemthuvien-enshu-1804/qa-skill
+claude plugin install web-qa@enshu-qa
+claude plugin install app-qa@enshu-qa   # nếu làm webapp
 ```
-/plugin marketplace add kiemthuvien-enshu-1804/qa-skill
-/plugin install web-qa@enshu-qa
-```
-Sau đó **bật cập nhật tự động**: `/plugin` → **Marketplaces** → `enshu-qa` → **Enable auto-update**.
-Claude Code mặc định không tự cập nhật marketplace bên thứ ba, nên mỗi người phải bật một lần. Chưa bật thì cập nhật tay bằng `/plugin marketplace update enshu-qa`.
+Sau đó **bật cập nhật tự động**: gõ `claude` → `/plugin` → **Marketplaces** → `enshu-qa` → **Enable auto-update**.
+Claude Code mặc định không tự cập nhật marketplace bên thứ ba, nên mỗi người phải bật một lần. Chưa bật thì cập nhật tay theo mục [Cập nhật plugin](#cập-nhật-plugin).
 
 - Repo private: máy phải có sẵn quyền đọc repo (SSH key trong ssh-agent, hoặc `gh auth login` + `gh auth setup-git`), vì Claude Code không hỏi mật khẩu khi clone.
 - Máy không có SSH key GitHub: đặt biến môi trường `CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`.
 - Cần có: Node 18+, Python 3 + `openpyxl` (`pip install openpyxl`), Git.
+
+## Cài Claude Code CLI trên Windows
+Extension VS Code không có lệnh `claude` trong terminal. Nếu gõ `claude` mà PowerShell báo *"The term 'claude' is not recognized"*, bạn cần cài CLI (một lần):
+
+1. Mở terminal trong VS Code (`` Ctrl+` ``), chọn PowerShell.
+2. Cài CLI:
+   ```powershell
+   npm.cmd install -g @anthropic-ai/claude-code
+   ```
+   Dùng `npm.cmd` thay `npm` để tránh lỗi *"npm.ps1 cannot be loaded because running scripts is disabled on this system"*.
+3. **Đóng terminal, mở terminal mới**, rồi kiểm tra bằng `claude --version`.
+
+**Lỗi "running scripts is disabled" (Execution Policy):** PowerShell chặn file `.ps1` (`npm.ps1`, `claude.ps1`). Có hai cách xử lý:
+- Gọi bản `.cmd`: `npm.cmd ...`, `claude.cmd ...`.
+- Hoặc sửa hẳn cho user hiện tại (không cần quyền admin), gõ `Y` khi được hỏi:
+  ```powershell
+  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+  ```
+  Sau đó `npm` và `claude` chạy bình thường.
+
+## Cập nhật plugin
+Làm khi repo này có commit mới mà máy chưa bật auto-update, hoặc khi skill chưa thấy thay đổi mới.
+
+1. Mở terminal PowerShell (cần CLI, xem mục trên).
+2. Kéo bản mới của marketplace:
+   ```powershell
+   claude plugin marketplace update enshu-qa
+   ```
+3. Cập nhật từng plugin đã cài:
+   ```powershell
+   claude plugin update web-qa@enshu-qa
+   claude plugin update app-qa@enshu-qa
+   ```
+4. Trong VS Code: `Ctrl+Shift+P` → **Developer: Reload Window** (hoặc mở phiên chat Claude mới) để nạp lại skill.
+
+**Kiểm tra đang ở bản nào:** commit đã cài ghi trong `~/.claude/plugins/installed_plugins.json` (trường `gitCommitSha`). So với commit mới nhất trên `main` của repo, nếu trùng thì đã là bản mới nhất.
+
+**Nếu `update` báo lỗi không tìm thấy plugin hay sai đường dẫn** (vd sau khi đổi cấu trúc thư mục `plugins/`), gỡ rồi cài lại:
+```powershell
+claude plugin uninstall web-qa@enshu-qa
+claude plugin install web-qa@enshu-qa
+```
 
 ## Tạo thư mục QA cho dự án mới
 1. Tạo thư mục rỗng (vd `qa-<dự-án>/`), mở bằng VS Code → Claude Code.
