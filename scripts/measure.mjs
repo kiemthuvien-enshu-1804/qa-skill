@@ -2,10 +2,11 @@
 // Pixel-spec check: compare live DOM computed styles + boxes with a Figma spec JSON.
 // Usage:
 //   node measure.mjs --spec specs/news.sp.json [--browser chromium] [--out runs/<id>] [--config qa-config.json]
-// Output: <out>/measure.<page>.<vp>.<browser>.json  (+ annotated screenshots in <out>/shots/)
+// Output: <out>/measure.<page>.<vp>.<browser>.json  (+ ảnh bug trong <out>/shots/: khung đỏ + giá trị Figma mong muốn cạnh khung; ảnh sạch *.raw.png)
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, loadConfig, findPage, readJson, writeJson, launch, openPage, runId, bugKey, toHex, colorDelta } from './lib.mjs';
+import { renderMark } from './annotate.mjs';
 
 const args = parseArgs();
 const cfg = loadConfig(args.config || 'qa-config.json');
@@ -75,6 +76,7 @@ for (const el of spec.elements) {
   }
   if (!diffs.length) continue;
   const shot = path.join(out, 'shots', `${spec.page}.${vpName}.${browserName}.${el.id}.png`);
+  handle.__label = el.label || el.id; handle.__node = el.figmaNodeId;
   await annotate(page, handle, shot, diffs);
   for (const d of diffs) {
     findings.push({
@@ -133,27 +135,28 @@ function round(n) { return Math.round(n * 100) / 100; }
 function fmt(v) { return typeof v === 'number' ? `${round(v)}` : String(v); }
 function norm(s) { return s.replace(/\s+/g, ''); }
 
+// Ảnh bug: chụp sạch vùng quanh phần tử (*.raw.png) → khung đỏ + mong muốn (Figma) cạnh khung (annotate.mjs).
 async function annotate(page, handle, file, diffs) {
-  await handle.scrollIntoViewIfNeeded().catch(() => {});
-  await handle.evaluate((n, label) => {
-    const r = n.getBoundingClientRect();
-    const box = document.createElement('div');
-    box.id = '__qa_box';
-    Object.assign(box.style, { position: 'fixed', left: r.left - 2 + 'px', top: r.top - 2 + 'px', width: r.width + 4 + 'px', height: r.height + 4 + 'px', outline: '2px solid #e5484d', zIndex: 2147483647, pointerEvents: 'none' });
-    const tag = document.createElement('div');
-    tag.textContent = label;
-    Object.assign(tag.style, { position: 'absolute', left: '0', top: '-22px', background: '#e5484d', color: '#fff', font: '12px/18px sans-serif', padding: '2px 6px', whiteSpace: 'nowrap' });
-    box.appendChild(tag);
-    document.body.appendChild(box);
-  }, diffs.map((d) => `${d.prop}: ${fmt(d.expected)} → ${fmt(d.actual)}`).join(' | ').slice(0, 140));
+  const PROP_LABEL = { x: 'X', y: 'Y', fontSize: 'font-size', fontWeight: 'font-weight', lineHeight: 'line-height', letterSpacing: 'letter-spacing',
+    paddingTop: 'padding-top', paddingRight: 'padding-right', paddingBottom: 'padding-bottom', paddingLeft: 'padding-left', borderRadius: 'border-radius',
+    borderWidth: 'border-width', backgroundColor: 'màu nền', borderColor: 'màu viền', color: 'màu chữ', fontFamily: 'font-family', textAlign: 'text-align', text: 'text' };
+  const short = (v) => { const t = fmt(v); return t.length > 60 ? t.slice(0, 57) + '…' : t; };
+  const unit = (p, v) => (typeof v === 'number' && !['fontWeight', 'opacity'].includes(p) ? `${short(v)}px` : short(v));
+  await handle.scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {});
   const b = await handle.boundingBox();
   const vp = page.viewportSize();
-  const pad = 60;
+  const pad = 80;
   let clip;
   if (b) {
-    const x = Math.max(0, b.x - pad), y = Math.max(0, b.y - pad - 20);
-    clip = { x, y, width: Math.min(vp.width - x, b.width + pad * 2), height: Math.min(vp.height - y, b.height + pad * 2 + 20) };
+    const x = Math.max(0, b.x - pad), y = Math.max(0, b.y - pad);
+    clip = { x, y, width: Math.min(vp.width - x, b.width + pad * 2), height: Math.min(vp.height - y, b.height + pad * 2) };
+    if (!(clip.width > 0 && clip.height > 0)) clip = undefined;
   }
-  await page.screenshot({ path: file, clip: clip && clip.width > 0 && clip.height > 0 ? clip : undefined });
-  await page.evaluate(() => document.getElementById('__qa_box')?.remove());
+  const raw = file.replace(/\.png$/, '.raw.png');
+  await page.screenshot({ path: raw, clip });
+  const box = b && clip ? [b.x - clip.x, b.y - clip.y, b.width, b.height] : null; // không hiển thị → không khoanh bừa cả màn hình
+  // Ảnh bug website: chỉ khung đỏ + mong muốn (giá trị Figma) cạnh khung. Phần tử không hiển thị → giữ ảnh, không khoanh bừa.
+  if (!box) { fs.copyFileSync(raw, file); return; }
+  const name = (p) => PROP_LABEL[p] || p;
+  await renderMark(browser, { in: raw, out: file, marks: [{ box, note: diffs.map((d) => `${name(d.prop)}: ${unit(d.prop, d.expected)}`) }] });
 }

@@ -1,6 +1,6 @@
 ---
 name: qa-bug-report
-description: Gom kết quả tự động ở VS Code (pixel, responsive, CMS, flow) và lỗi kiểm tay thành bugs.json có ảnh khoanh lỗi, nhóm Chung/SP/PC/Responsive, rồi đẩy lên Bug Tracker (link chia sẻ để dev đổi status và comment).
+description: Gom kết quả tự động ở VS Code (pixel, responsive, CMS, flow) và lỗi kiểm tay thành bugs.json có ảnh bug (khung đỏ từng chỗ sai + mong muốn ghi cạnh khung), nhóm Chung/SP/PC/Responsive, rồi đẩy lên Bug Tracker (link chia sẻ để dev đổi status và comment).
 ---
 
 # Tạo bug & đẩy lên Bug Tracker
@@ -30,6 +30,17 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/make_bugs.py" --run $RUN
 - gộp bug cùng nguyên nhân (vd. CMS ngày lệch ở list và ở chi tiết = 1 bug JST), bỏ lệch `y` kéo theo section phía trên
 - bỏ finding không hợp lệ (CMS chưa rebuild đã xác nhận, nội dung CMS khác dữ liệu mẫu Figma)
 - viết lại `title` ngắn, dev đọc là hiểu (tiếng Việt hoặc tiếng Nhật theo dự án)
+
+## 2b. Ảnh bug (không gửi ảnh gốc)
+Ảnh bug website **chỉ gồm**: khung đỏ quanh từng chỗ sai + ghi **mong muốn** ngay cạnh khung (vd `font-size: 16px`, `Hiển thị 「お知らせ一覧」`).
+Không thêm tiêu đề, môi trường, "hiện tại", nguồn… (bug trên Tracker đã có các thông tin đó). Chỉ khoanh chỗ chắc chắn là bug.
+
+Ai vẽ:
+- **Pixel (`measure.mjs`)**: tự vẽ `shots/*.png` (khung đỏ + giá trị Figma mong muốn; ảnh sạch là `*.raw.png`). Phần tử không hiển thị thì giữ ảnh, không khoanh bừa.
+- **CMS / flow / responsive / bug tay**: sau bước 2, với từng bug Claude viết `$RUN/marks/<key>.json`
+  (`{ "in": "upload/<ảnh>.png", "out": "upload/<key>_FAIL.png", "marks": [{ "box": [x,y,w,h], "note": "<mong muốn>" }] }`, toạ độ lấy bằng `locator.boundingBox()` hoặc đo trên ảnh),
+  chạy `node "${CLAUDE_PLUGIN_ROOT}/scripts/annotate.mjs" --spec $RUN/marks/<key>.json`, rồi thay tên ảnh trong `screenshots` của bug bằng ảnh mới.
+- Claude tự mở ảnh xem lại (khung đúng chỗ, nhãn không che chỗ sai). Ảnh **không cần duyệt riêng**: đi cùng bug khi Import (chọn cả thư mục `upload/`).
 
 ## 3. Đẩy lên Tracker (`qa-config.json → tracker.url`)
 - Thường dùng: mở Tracker → Import → chọn `bugs.json` cùng toàn bộ ảnh trong `upload/`. Tracker tự gán mã `<bugPrefix>-001…`, bỏ qua bug trùng `key`.
