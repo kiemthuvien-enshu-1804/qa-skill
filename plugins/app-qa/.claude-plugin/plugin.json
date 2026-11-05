@@ -1,0 +1,8 @@
+{
+  "name": "app-qa",
+  "displayName": "App QA Kit",
+  "description": "Bộ QA webapp dùng chung: thiết kế test case từ tài liệu git + mockup Claude Design, test data, chạy TC bằng Playwright (1 ảnh/TC), TestRail, log/verify bug trên Backlog (có bước duyệt). Dữ liệu dự án nằm ở thư mục QA riêng và repo docs.",
+  "author": { "name": "kiemthuvien-enshu-1804" },
+  "repository": "https://github.com/kiemthuvien-enshu-1804/qa-skill",
+  "keywords": ["qa", "webapp", "playwright", "testrail", "backlog", "test-case"]
+}

@@ -30,7 +30,7 @@ Scripts: `${CLAUDE_PLUGIN_ROOT}/scripts/` (plugin web-qa). Chạy từ thư mụ
 4. `qa-logic-flow` — luồng theo Figma comment, filter, pagination, menu, modal, validation (không gửi form thật), link
 5. `qa-pixel-check` — từng px, diff ảnh, Chrome/Edge/WebKit (trang CMS: so Figma bằng bài `noPrefix` text giống Figma)
 6. `qa-responsive` — 360→1920 × 3 browser (dữ liệu seed dài/ngắn giúp bắt tràn, cắt chữ)
-7. `qa-bug-report` — bugs.json → Import vào Tracker (có mã bug, ảnh kèm khoanh vùng bug)
+7. `qa-bug-report` — bugs.json → Import vào Tracker (ảnh bug: khung đỏ từng chỗ sai + mong muốn ghi cạnh khung; ảnh đi kèm bug, không cần duyệt riêng)
 8. `qa-checklist-excel` — đầu tiên tự tạo thêm cột cho trang được test tương tự các cột có sẵn trong file (ở cả 3 sheet trong file). Điền OK/NG/N/A cho mục có bằng chứng tự động; **mục còn lại để trống** → sinh `<Checklist>_result_tester-prompt.md`
 9. Báo tester (soạn sẵn tin nhắn, mẫu bên dưới) kèm: file `_result.xlsx`, file prompt, link Tracker, thời điểm chạy/build.
 

@@ -1,0 +1,7 @@
+# Bí mật — không bao giờ commit
+.env
+.env.local
+.env.*.local
+
+node_modules/
+runs/

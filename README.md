@@ -11,6 +11,17 @@ qa-skill/  (repo này)                            qa-<dự-án>/  (mỗi dự á
 └─ templates/project/  khung thư mục QA          └─ specs/ flows/ checklist/ cms-seed/ runs/
 ```
 
+## Hai plugin trong marketplace `enshu-qa`
+| Plugin | Dùng cho | Nguồn | Bật trong thư mục QA |
+|---|---|---|---|
+| `web-qa` | Website: design + tài liệu trên **Figma**, dữ liệu CMS, checklist Excel, Bug Tracker | `./` (repo gốc) | `"web-qa@enshu-qa": true` |
+| `app-qa` | Webapp: tài liệu trên **git**, mockup **Claude Design**, test case CSV → **TestRail**, bug → **Backlog** | [`plugins/app-qa/`](plugins/app-qa/) | `"app-qa@enshu-qa": true` |
+
+Hai plugin độc lập: không gọi skill hay script của nhau. Mỗi thư mục QA chỉ bật plugin của mảng mình.
+Cài `app-qa`: `/plugin install app-qa@enshu-qa`. Tạo thư mục QA webapp: nói với Claude *"tạo thư mục QA webapp cho dự án <tên>, docs ở <repo docs>"*.
+Key TestRail/Backlog của `app-qa` là key **cá nhân**, để ở `~/.app-qa/.env` trên máy mỗi người (init tạo file mẫu), **không** để trong plugin hay `.env` của app. Project ID/key ghi ở `qa-config.json` của thư mục QA.
+Quy trình và rule của `app-qa` lấy từ `07_Testing` của dự án Entoly (`RULES/01–04`). Rule của dự án (trong repo docs) được ưu tiên hơn bản mặc định trong `plugins/app-qa/templates/rules/`.
+
 ## Cài lần đầu (mỗi máy, 1 lần)
 Trong Claude Code (terminal hoặc VS Code):
 ```

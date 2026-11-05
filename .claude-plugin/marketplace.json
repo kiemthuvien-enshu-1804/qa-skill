@@ -1,12 +1,17 @@
 {
   "name": "enshu-qa",
-  "description": "Bộ QA website dùng chung (Figma + CMS ↔ website) cho các dự án",
+  "description": "Bộ QA dùng chung cho các dự án: website (Figma + CMS) và webapp (tài liệu git + TestRail + Backlog)",
   "owner": { "name": "kiemthuvien-enshu-1804" },
   "plugins": [
     {
       "name": "web-qa",
       "source": "./",
-      "description": "Figma spec, pixel, responsive, CMS data/seed, logic flow, bug tracker, checklist Excel (Playwright + Claude Code)"
+      "description": "Website: Figma spec, pixel, responsive, CMS data/seed, logic flow, bug tracker, checklist Excel (Playwright + Claude Code)"
+    },
+    {
+      "name": "app-qa",
+      "source": "./plugins/app-qa",
+      "description": "Webapp: test case từ tài liệu git + Claude Design, test data, chạy TC (Playwright), TestRail, log/verify bug trên Backlog"
     }
   ]
 }

@@ -1,0 +1,65 @@
+{
+  "_readme": "Cấu hình QA webapp (plugin app-qa). Giá trị <...> phải điền. Key/mật khẩu KHÔNG ghi ở đây — chỉ tên biến môi trường. Kiểm tra: doctor.mjs của plugin",
+  "type": "webapp",
+  "project": "<tên dự án>",
+  "envFiles": [
+    { "_note": "Tuỳ chọn: lấy cấu hình DB local từ .env của app (cho app-testdata). Key TestRail/Backlog để ở ~/.app-qa/.env", "path": "<C:/.../be/.env>", "keys": ["DB_*"] }
+  ],
+
+  "docs": {
+    "_note": "Repo tài liệu trên git. spec = đặc tả chức năng, testing = nơi lưu TESTCASE/TESTDATA/BUGREPORT/RULES",
+    "repo": "<C:/.../docs>",
+    "branch": "main",
+    "specDirs": ["docs/01_requirements", "docs/03_design"],
+    "testing": "docs/07_Testing"
+  },
+  "design": {
+    "_note": "Mockup Claude Design. local = bản export HTML/ảnh trong repo (đọc được offline)",
+    "url": "<https://claude.ai/design/p/...>",
+    "local": ["docs/02_mockups"]
+  },
+
+  "envs": {
+    "test": { "url": "<https://app-test.example.jp>", "build": { "_note": "cách lấy build: footer | api | manual", "type": "manual", "api": "/api/version" } },
+    "local": { "url": "http://localhost:3001" }
+  },
+  "defaultEnv": "test",
+  "locale": "ja-JP",
+  "timezone": "Asia/Tokyo",
+
+  "apps": {
+    "admin": { "login": { "path": "/admin/login", "user": "input[autocomplete=username]", "pass": "input[autocomplete=current-password]", "submit": "button[type=submit]", "otp": "[aria-label*=OTP], input[autocomplete=one-time-code]" } },
+    "user": { "login": { "path": "/{tenant}/login", "user": "input[type=email]", "pass": "input[type=password]", "submit": "button[type=submit]" } }
+  },
+  "accounts": {
+    "_note": "Tên tài khoản = tên trong TD-xx của test design. Mật khẩu chỉ ở .env.local",
+    "admin_a": { "userEnv": "QA_ADMIN_A_USER", "passEnv": "QA_ADMIN_A_PASS", "role": "admin", "tenant": "" }
+  },
+
+  "testrail": {
+    "_note": "URL/USER/KEY đọc từ env (~/.app-qa/.env). projectId của dự án ghi ở đây. statusIds: map trạng thái logic → id (xem: testrail.mjs statuses)",
+    "projectId": "<id project TestRail>",
+    "statusIds": { "PASS": 1, "FAIL": 5, "BLOCKED": 2, "NA": 2 },
+    "priorityIds": { "P1": 4, "P2": 3, "P3": 2 },
+    "caseFields": { "title": "{Test Case ID} — {Test Case Name}", "custom_preconds": "{Pre-Condition}", "custom_steps": "{Steps}", "custom_expected": "{Expected Result}" },
+    "runNamePrefix": "[<tên tester>]Test Run_"
+  },
+
+  "backlog": {
+    "_note": "URL/API key đọc từ env (~/.app-qa/.env). projectKey của dự án ghi ở đây. Tên user/loại/trạng thái: backlog.mjs meta",
+    "projectKey": "<PROJECT_KEY>",
+    "assignees": { "FE": "<tên dev FE trên Backlog>", "BE": "<tên dev BE trên Backlog>" },
+    "parentTasks": { "_note": "module → issue cha", "M2": 66 },
+    "defaults": { "issueType": "Bug", "priority": "Normal" },
+    "verifyFilter": { "assignee": "me", "status": ["In Progress", "Resolved"], "type": "Bug" },
+    "statusOnVerify": { "PASS": "Closed", "FAIL": "In Progress" },
+    "commentLanguage": "vi"
+  },
+
+  "review": {
+    "_note": "Người chốt câu hỏi spec / lệch tài liệu-mockup, ghi trong test case và bug",
+    "specOwner": "<tên>",
+    "verifyMode": "approve",
+    "regressionLimit": 5
+  }
+}

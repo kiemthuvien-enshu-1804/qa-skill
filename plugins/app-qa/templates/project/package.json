@@ -1,0 +1,12 @@
+{
+  "name": "qa-project",
+  "private": true,
+  "type": "module",
+  "description": "Thư mục QA webapp của 1 dự án. Skill + script nằm ở plugin app-qa@enshu-qa; file này chỉ giữ thư viện mà script cần.",
+  "scripts": {
+    "setup": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}
