@@ -15,18 +15,23 @@ checklist-map.json (mỗi dự án 1 lần):
   "contextCols": ["B"],                   # cột ngữ cảnh đưa vào prompt tester (màn hình, khu vực…)
   "resultCols": {"chromium": "H", "msedge": "I", "webkit": "J"},   # hoặc {"all": "H"}
   "bugCol": "K", "noteCol": "L", "dateCol": "M", "testerCol": "N",
-  "okText": "OK", "ngText": "NG", "naText": "N/A"
+  "okText": "OK", "ngText": "NG", "naText": "NA"
 }
 checklist-results.json:
-[{"sheet": "TOP", "row": 12, "status": "NG", "browsers": ["webkit"], "bugs": ["ABC-012"], "note": "..."},
- {"sheet": "News", "id": "N-03", "status": "OK"}]
+[{"sheet": "TOP", "row": 12, "status": "NG", "browsers": ["webkit"], "note": "..."},
+ {"sheet": "News", "id": "N-03", "status": "OK"},
+ {"sheet": "News", "id": "N-20", "status": "NA", "note": "Trang không có form"}]
+  status: OK | NG | NA. Không ghi mã bug vào checklist (bug nằm trên Tracker); field "bugs" chỉ dùng nếu dự án yêu cầu.
+  NA = trang được test không có chức năng/khối đó. Trang có nhưng chưa kiểm được → không đưa vào results (ô để trống).
 """
-import argparse, datetime, json, os
+import argparse, datetime, json, os, sys
+for _s in (sys.stdout, sys.stderr):  # console Windows (cp1252/cp932) không in được tiếng Việt
+    _s.reconfigure(encoding="utf-8", errors="replace")
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import column_index_from_string
 
-FILL = {"OK": PatternFill("solid", fgColor="D9F2E3"), "NG": PatternFill("solid", fgColor="FBD5D5"), "N/A": PatternFill("solid", fgColor="EEEEEE")}
+FILL = {"OK": PatternFill("solid", fgColor="D9F2E3"), "NG": PatternFill("solid", fgColor="FBD5D5"), "NA": PatternFill("solid", fgColor="EEEEEE")}
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--checklist", help="mặc định: qa-config.json → checklist.file")
@@ -58,7 +63,7 @@ if a.inspect:
 
 m = json.load(open(a.mapping, encoding="utf-8"))
 results = json.load(open(a.results, encoding="utf-8"))
-ok, ng, na = m.get("okText", "OK"), m.get("ngText", "NG"), m.get("naText", "N/A")
+ok, ng, na = m.get("okText", "OK"), m.get("ngText", "NG"), m.get("naText", "NA")
 col = lambda letter: column_index_from_string(letter)
 today = datetime.date.today().strftime("%Y/%m/%d")
 
@@ -82,7 +87,7 @@ for res in results:
     if not row:
         missing.append(res); continue
     status = {"OK": ok, "NG": ng, "NA": na, "N/A": na}.get(res["status"].upper(), res["status"])
-    skey = "N/A" if res["status"].upper() in ("NA", "N/A") else res["status"].upper()
+    skey = "NA" if res["status"].upper() in ("NA", "N/A") else res["status"].upper()
     fill = FILL.get(skey)
     rc = m["resultCols"]
     targets = [rc["all"]] if "all" in rc else [rc[b] for b in rc]
@@ -154,14 +159,16 @@ lines = [
     f"- Bước tự động đã chạy lúc: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M')} — nếu site đã deploy lại sau thời điểm này, báo tester trước khi test",
     "",
     "## Quy tắc",
-    "1. Chỉ kiểm các mục trong danh sách. Mỗi mục: mở trang, thao tác theo nội dung mục, so với Figma/spec, kết luận OK / NG / N/A.",
+    "1. Chỉ kiểm các mục trong danh sách. Mỗi mục: mở trang, thao tác theo nội dung mục, so với Figma/spec, kết luận OK / NG / NA (NA = trang không có chức năng/khối đó).",
     "2. Trước khi bắt đầu, hỏi tester 1 lần: form nào được gửi thật và email test nào; có được thao tác CMS admin không; tab Gmail/Outlook nào để kiểm mail.",
     "3. Gặp màn hình đăng nhập, OTP, CAPTCHA: dừng lại, nhờ tester tự làm rồi tiếp tục. Không tự nhập mật khẩu.",
     "4. Không gửi form, không sửa/xoá dữ liệu CMS, không gửi mail ngoài phạm vi tester đã cho phép.",
     "5. Cửa sổ Chrome không thu nhỏ dưới khoảng 500px: mục chỉ kiểm được ở SP 375px thì ghi \"cần kiểm SP bằng DevTools/thiết bị\" thay vì đoán.",
-    "6. Mục NG: mở Bug Tracker → \"+ Bug\", chọn Kiểm bằng = Claude in Chrome, điền tiêu đề ngắn, trang, mong đợi / thực tế / cách tái hiện, đính kèm ảnh chụp. Ghi lại mã bug (vd ABC-031).",
+    "6. Mục NG: mở Bug Tracker → \"+ Bug\", chọn Kiểm bằng = Claude in Chrome, điền bằng tiếng Việt: tiêu đề ngắn, trang, mong đợi / thực tế / cách tái hiện, đính kèm ảnh chụp. Checklist chỉ ghi NG, không ghi mã bug.",
+    "   Mức độ: high = chặn chức năng / sai dữ liệu; medium = sai design/spec dễ thấy nhưng vẫn dùng được; low = lệch nhỏ, thẩm mỹ, tối ưu.",
+    "   Môi trường: chỉ điền khi lỗi riêng 1 môi trường (browser + version, OS, thiết bị), vd \"Safari 18.2 · iPhone 15 (iOS 18.2)\".",
     "   Lỗi animation/thao tác: quay GIF đính kèm.",
-    f"7. Ghi kết quả: nếu checklist đang mở trên trình duyệt (Excel Online / Google Sheets) thì điền thẳng vào cột kết quả ({', '.join(browsers) or 'kết quả'}), cột bug, ngày, người test; nếu không, cuối cùng trả bảng: Sheet | Dòng | ID | Kết quả | Mã bug | Ghi chú để tester dán vào.",
+    f"7. Ghi kết quả: nếu checklist đang mở trên trình duyệt (Excel Online / Google Sheets) thì điền thẳng vào cột kết quả ({', '.join(browsers) or 'kết quả'}), ngày, người test (không ghi mã bug); nếu không, cuối cùng trả bảng: Sheet | Dòng | ID | Kết quả | Ghi chú để tester dán vào.",
     "8. Chưa kiểm được thì để trống và ghi lý do. Không đánh OK cho mục chưa thực sự kiểm.",
     "",
     f"## Mục cần kiểm ({len(remaining)})",

@@ -11,7 +11,7 @@ Người dùng chỉ cần khai báo **1 link chung** ở `qa-config.json → fi
 1. `pages[].figma` nếu có (`spUrl`/`pcUrl`, hoặc `fileKey` + `sp`/`pc`) — dùng để ghi đè khi tự tìm sai.
 2. `figma.map` (mặc định `specs/figma-map.json`) → `pages.<page>.sp/pc` đã ghép từ trước.
 3. Chưa có → tự tìm:
-   - Liệt kê frame: có `FIGMA_TOKEN` → `python3 $S/figma_api.py frames --file <fileKey> [--node <pageNode>] --out specs/figma-frames.json`.
+   - Liệt kê frame (`$S`, `$PY` như ở Cách A): có `FIGMA_TOKEN` → `$PY $S/figma_api.py frames --file <fileKey> [--node <pageNode>] --out specs/figma-frames.json`.
      Không token → `get_metadata` (Figma MCP) với node trong `figma.url` (không có node → gọi không nodeId để lấy danh sách page, chọn page thiết kế chính, bỏ qua page cũ/archive), rồi `figma_api.py frames --mcp <file kết quả get_metadata> --file <fileKey> --node <pageNode> --out specs/figma-frames.json`.
    - Script nhóm frame theo section, phân loại SP/PC theo width (`viewports`) hoặc tiền tố tên `SP/`, `PC/`, và chọn `spMain`/`pcMain` = frame có nội dung cao nhất (các frame còn lại thường là trạng thái first view/menu mở/animation).
    - Ghép trang ↔ section theo nghĩa: so `path`, `name`, `<title>`/`h1`/breadcrumb của trang thật với tên section/frame (vd `/` ↔ `01|TOP`, `/news` ↔ `03|お知らせ`, `/contact` ↔ `お問い合わせ`). Trang chi tiết dùng section "汎用"/"詳細". Form có màn xác nhận/hoàn tất → ghi vào `extra`.
@@ -21,19 +21,20 @@ Người dùng chỉ cần khai báo **1 link chung** ở `qa-config.json → fi
 
 ## Cách A — Figma REST (nhanh, đầy đủ nhất; cần `FIGMA_TOKEN`)
 ```bash
-S="${CLAUDE_PLUGIN_ROOT}/scripts"
-python3 $S/figma_api.py spec --file <fileKey> --node <spNode> --page <page> --vp sp --out specs/<page>.sp.json
-python3 $S/figma_api.py spec --file <fileKey> --node <pcNode> --page <page> --vp pc --out specs/<page>.pc.json
-python3 $S/figma_api.py png  --file <fileKey> --node <spNode> --out specs/<page>.sp.png --scale 1
-python3 $S/figma_api.py png  --file <fileKey> --node <pcNode> --out specs/<page>.pc.png --scale 1
-python3 $S/figma_api.py comments --file <fileKey> --out specs/<fileKey>.comments.json
+S="${CLAUDE_PLUGIN_ROOT}/scripts"; PY=$(python3 -c 1 2>/dev/null && echo python3 || echo python)
+$PY $S/figma_api.py spec --file <fileKey> --node <spNode> --page <page> --vp sp --out specs/<page>.sp.json
+$PY $S/figma_api.py spec --file <fileKey> --node <pcNode> --page <page> --vp pc --out specs/<page>.pc.json
+$PY $S/figma_api.py png  --file <fileKey> --node <spNode> --out specs/<page>.sp.png --scale 1
+$PY $S/figma_api.py png  --file <fileKey> --node <pcNode> --out specs/<page>.pc.png --scale 1
+$PY $S/figma_api.py comments --file <fileKey> --out specs/<fileKey>.comments.json
 ```
 
 ## Cách B — Figma MCP (không có token)
 1. `create_session` với fileKey, rồi `get_metadata` node frame → danh sách node con + bounds.
 2. `get_design_context` cho từng section (không cả trang một lần nếu frame quá dài) → font, màu, spacing.
 3. `get_variable_defs` để biết token màu/typography.
-4. Tự viết `specs/<page>.<vp>.json` đúng schema dưới. PNG frame: nhờ người dùng Export frame 1x vào `specs/`.
+4. Tự viết `specs/<page>.<vp>.json` đúng schema dưới.
+5. PNG frame: `download_assets` (Figma MCP) với node frame SP/PC, không truyền `defaultScale` (mặc định 1x). Kết quả có link tạm `export` → tải ngay: `curl -sL "<export url>" -o specs/<page>.<vp>.png`. Kiểm tra width ảnh = `frameWidth` (1x). Không dùng `get_screenshot` cho file này vì ảnh bị thu nhỏ theo `maxDimension`.
 
 ## Hoàn thiện spec (bắt buộc)
 Spec nháp có hàng trăm element — làm gọn và gắn selector:

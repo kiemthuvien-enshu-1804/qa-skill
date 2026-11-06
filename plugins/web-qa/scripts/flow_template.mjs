@@ -3,7 +3,8 @@
 // Chạy: WEBQA_ROOT="<thư mục plugin web-qa>" node flows/<page>.flow.mjs --out $RUN [--vp sp|pc] [--browser chromium]
 //   (skill qa-logic-flow điền WEBQA_ROOT = ${CLAUDE_PLUGIN_ROOT}; đường dẫn plugin đổi sau mỗi lần cập nhật nên không ghi cứng vào file)
 // Output: $RUN/flow.<page>.<vp>.<browser>.json  { checks: [{name, status, expected, actual, steps, ...}] }
-//   status: "pass" | "fail" | "blocked" (không tự động được, vd CAPTCHA) | "needs-chrome" (cần Chrome thật)
+//   status: "pass" | "fail" | "na" (trang không có thứ đó → checklist NA) | "blocked" (không tự động được, vd CAPTCHA) | "needs-chrome" (cần Chrome thật)
+// Check chung mọi trang (OGP, GTM, tel, ảnh, link, breadcrumb, 404) đã có ở page_checks.mjs — không viết lại ở đây.
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 if (!process.env.WEBQA_ROOT) throw new Error('Thiếu WEBQA_ROOT (thư mục plugin web-qa) — chạy qua skill qa-logic-flow');
@@ -25,7 +26,7 @@ const browser = await launch(browserName);
 const { ctx, page, url } = await openPage(browser, cfg, pg, viewport, browserName);
 
 /** Một check. fn trả về {ok, actual} hoặc throw. */
-async function check(name, { steps = [], expected = '', severity = 'high', group = 'common' }, fn) {
+async function check(name, { steps = [], expected = '', severity = 'medium', group = 'common' }, fn) {
   const c = { name, steps, expected, severity, group, viewport: viewport.width, viewportName: vpName, browser: browserName, key: bugKey(PAGE, 'flow', name) };
   try {
     const r = await fn();

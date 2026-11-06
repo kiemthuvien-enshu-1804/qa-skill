@@ -28,8 +28,8 @@ Mục đích: biết chắc trang **phải** hiển thị gì. Mỗi bài trong 
 - `CMS_WRITE_API_KEY`: API key có quyền GET/POST/PUT/PATCH/DELETE cho các endpoint cần seed, điền trong `.env.local`. Nếu key đọc (`CMS_API_KEY`) đã có quyền ghi thì trỏ `headers` về `${CMS_API_KEY}`.
 - `QA_SEED_PREFIX`: tên viết tắt của người test (vd `KIM`), điền trong `.env.local`. Mỗi tester một prefix nên dữ liệu không đè nhau.
 
-## 2. Viết file seed `cms-seed/<tên>.seed.json`
-Mỗi API (endpoint) của CMS cần một file seed. Một API có thể đổ dữ liệu ra nhiều chỗ trên site (trang list, detail, khối pickup ở TOP, slider, sidebar…). Liệt kê hết các chỗ đó từ Figma + `pages[]` trước khi viết seed, rồi chọn ca test sao cho phủ được tất cả.
+## 2. Viết file seed `cms-seed/<page>.seed.json`
+Mỗi API (endpoint) của CMS cần một file seed. Đặt tên file theo `name` của **trang list chính** của API đó trong `pages[]` (vd API `/news` → `cms-seed/news.seed.json`), vì script ghi kết quả ra `cms-seed/<page>.applied.json` theo tên file seed. Một API có thể đổ dữ liệu ra nhiều chỗ trên site (trang list, detail, khối pickup ở TOP, slider, sidebar…). Liệt kê hết các chỗ đó từ Figma + `pages[]` trước khi viết seed, rồi chọn ca test sao cho phủ được tất cả.
 
 **Lấy schema thật trước, không đoán tên field:** chạy `node "${CLAUDE_PLUGIN_ROOT}/scripts/cms_check.mjs" --page <page> --dump` hoặc GET 1 bài của endpoint đó. Từ đó biết field nào là text, rich editor, ảnh, tham chiếu, select, bool, số, ngày, lặp (repeater).
 
@@ -38,12 +38,17 @@ Mỗi API (endpoint) của CMS cần một file seed. Một API có thể đổ 
 |---|---|
 | Số lượng (list, slider, grid, khối TOP) | 0 bài (qua filter/category rỗng), 1 bài, đúng giới hạn hiển thị, giới hạn + 1 (pagination / "xem thêm" / ẩn bớt), số lẻ làm grid thiếu ô cuối |
 | Text ngắn (tiêu đề, tên, label) | 1 ký tự, rất dài (`{jp:120}`), toàn số/chữ Latin dài không dấu cách (vỡ layout), ký tự đặc biệt / emoji / ｶﾀｶﾅ半角 / `<b>` |
-| Rich editor / textarea | nhiều đoạn, h2/h3, list, link, ảnh, bảng, xuống dòng trong textarea |
+| Rich editor / textarea | nhiều đoạn; đủ phần tử editor: h1–h5, p, **bold**, *italic*, gạch chân, gạch ngang, màu chữ, căn lề, đường kẻ (hr), trích dẫn, bảng, list, link, ảnh; xuống dòng trong textarea |
 | Ảnh | không có ảnh (no-image), ảnh dọc, ảnh ngang rất dài |
 | Ngày | 00:10 và 23:50 giờ Nhật (lệch UTC/JST), cùng ngày (thứ tự), năm trước (format), ngưỡng "NEW" nếu có |
 | Tham chiếu / select / tag | không chọn, chọn 1, chọn nhiều, category không có bài |
-| Bool / số / link ngoài | true/false, 0 / số lớn / số âm, link `target="_blank"`, link trống |
-| Trạng thái | bài nháp (không được hiện) |
+| Bool / toggle / checkbox | bật và tắt (trang hiện/ẩn đúng theo giá trị), checkbox chọn và không chọn |
+| File | có file (PDF…): bấm mở đúng file đã upload; không có file: không hiện link |
+| Số / link ngoài | 0 / số lớn / số âm, link `target="_blank"`, link trống |
+| Thiếu field | bài nhập đủ mọi field (hiện đủ); bài bỏ trống field không bắt buộc (field đó và nhãn của nó không hiện) |
+| Thời gian đăng | có ngày bắt đầu/kết thúc (掲載期間): chưa tới, đang trong kỳ, đã hết → chỉ bài đang trong kỳ hiển thị (nếu spec có) |
+| Trạng thái | bài nháp (không được hiện); không có dữ liệu → hiện đúng câu trong Figma/checklist (vd 「現在ご案内できる情報はございません」) |
+| Số lượng lớn | > 100 bài nếu trang có pagination (API microCMS trả tối đa 100/lần) |
 | Thiết kế | 1 bài `noPrefix` có text y hệt Figma, dùng cho pixel-check |
 
 Ngoài ra thêm ca từ **Figma comment về luồng**. Ví dụ comment ghi "TOP hiện tối đa 3 bài" thì seed ít nhất 4 bài; "NEW trong 7 ngày" thì có bài 6 ngày và 8 ngày trước; "không có ảnh thì dùng ảnh mặc định" thì có bài không ảnh.

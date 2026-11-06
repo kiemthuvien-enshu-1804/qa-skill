@@ -21,15 +21,36 @@ Schema bug tay (`manual_bugs.json`):
  "steps": "1. …\n2. …", "screenshots": ["runs/.../x.png"], "figma": {"fileKey": "…", "nodeId": "…"}}
 ```
 `group`: common | sp | pc | responsive. `type`: layout | typography | color | component | content | cms | logic | figma-comment | responsive | console | tracking.
+`env` (tuỳ chọn): chỉ ghi khi bug **chỉ xảy ra ở một môi trường đặc biệt**, xem mục 1c.
+
+## 1b. Severity
+Mỗi bug có đúng 1 mức. Không chắc giữa 2 mức thì chọn mức thấp hơn và ghi lý do trong `actual`.
+| Mức | Khi nào | Ví dụ |
+|---|---|---|
+| `high` | Chặn chức năng hoặc luồng chính, sai/thiếu dữ liệu, người dùng không làm tiếp được | Form không gửi được, link nội bộ 404, menu SP không mở, CMS hiện sai bài/sai ngày, scroll ngang toàn trang, ảnh chính không hiển thị, lỗi JS làm hỏng trang |
+| `medium` | Sai so với Figma/spec mà người dùng dễ thấy, nhưng vẫn dùng được | Sai font-size/màu/khoảng cách ở heading, nút; text bị cắt; thiếu OGP/description; sai thứ tự hiển thị; validation thiếu thông báo |
+| `low` | Lệch nhỏ, thẩm mỹ, tối ưu; khó nhận ra bằng mắt | Lệch 2–4px, vùng chạm nhỏ, ảnh chưa Retina, ảnh nặng, favicon thiếu, link tel: còn bấm được trên PC |
+
+Script tự gán mức ban đầu (pixel theo độ lệch, responsive/CMS/page_checks theo loại lỗi, flow mặc định `medium`). Claude xem lại theo bảng trên khi sửa `bugs.json` ở bước 2: nâng mức nếu lỗi nằm ở khu vực quan trọng (first view, CTA, form), hạ mức nếu chỉ ở chỗ phụ.
+
+## 1c. Môi trường
+**Chỉ ghi `env` khi bug chỉ xảy ra ở môi trường đặc biệt** (1 browser, 1 OS, 1 thiết bị thật). Bug xảy ra ở mọi môi trường đã kiểm thì không ghi.
+- Bug tự động: `make_bugs.py` tự thêm `env` khi bug chỉ có ở một phần các browser đã chạy, kèm version browser của Playwright và OS (vd `Chỉ lỗi trên WebKit (≈ Safari) 27.2 · Windows 11 (Playwright). Không lỗi trên Chrome (Chromium).`).
+- Bug tay / bug Claude in Chrome: tự ghi, gồm browser + version, OS, thiết bị (vd `Safari 18.2 · iPhone 15 (iOS 18.2)`).
+- Viewport/width không phải môi trường: đã có ở `viewports`, `group`.
 
 ## 2. Sinh bugs.json
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/make_bugs.py" --run $RUN
+PY=$(python3 -c 1 2>/dev/null && echo python3 || echo python)
+$PY "${CLAUDE_PLUGIN_ROOT}/scripts/make_bugs.py" --run $RUN
 ```
 → `bugs.json`, `upload/*.png`, `summary.md`. Đọc `summary.md` rồi sửa trực tiếp `bugs.json`:
 - gộp bug cùng nguyên nhân (vd. CMS ngày lệch ở list và ở chi tiết = 1 bug JST), bỏ lệch `y` kéo theo section phía trên
 - bỏ finding không hợp lệ (CMS chưa rebuild đã xác nhận, nội dung CMS khác dữ liệu mẫu Figma)
-- viết lại `title` ngắn, dev đọc là hiểu (tiếng Việt hoặc tiếng Nhật theo dự án)
+- rà lại `severity` theo bảng 1b
+- viết lại `title` ngắn, dev đọc là hiểu
+
+**Ngôn ngữ: mọi bug viết bằng tiếng Việt** (`title`, `expected`, `actual`, `steps`, comment), vì Tracker là link nội bộ của team người Việt. Chữ trên site (tiếng Nhật) thì giữ nguyên trong 「」, vd `Hiển thị 「お知らせ一覧」`.
 
 ## 2b. Ảnh bug (không gửi ảnh gốc)
 Ảnh bug website **chỉ gồm**: khung đỏ quanh từng chỗ sai + ghi **mong muốn** ngay cạnh khung (vd `font-size: 16px`, `Hiển thị 「お知らせ一覧」`).
@@ -43,10 +64,27 @@ Ai vẽ:
 - Claude tự mở ảnh xem lại (khung đúng chỗ, nhãn không che chỗ sai). Ảnh **không cần duyệt riêng**: đi cùng bug khi Import (chọn cả thư mục `upload/`).
 
 ## 3. Đẩy lên Tracker (`qa-config.json → tracker.url`)
+Tracker là một trang claude.ai (Artifact) dùng chung cho team: xem bug, đổi trạng thái, comment, "+ Bug", Import, Export JSON.
+
+### 3a. `tracker.url` trống → tạo Tracker mới
+1. Load skill `artifact-capabilities` (bắt buộc trước khi truyền `capabilities`).
+2. Copy mẫu vào thư mục QA rồi đặt tên theo dự án:
+   ```bash
+   mkdir -p tracker && cp "${CLAUDE_PLUGIN_ROOT}/templates/tracker/index.html" tracker/index.html
+   ```
+   Sửa `<title>` và `<h1>` thành `<project> Bug Tracker`.
+3. Publish bằng tool Artifact: `file_path: tracker/index.html`, `icon: "bug"`, `capabilities: {"assets":{"upload":"interact"},"db":{},"downloads":{},"user":{"scopes":["profile"]}}`.
+4. Ghi link trả về vào `qa-config.json → tracker.url`.
+5. Báo người dùng làm 2 việc trên trang Tracker (Claude không tự làm được):
+   - **Share** → chọn **Anyone with the link** (mọi người có link), cho phép tương tác, để dev mở link là comment và đổi trạng thái được.
+   - **Copy link** → mở 1 bug bất kỳ, bấm "Copy link", dán link chia sẻ vào ô được hỏi. Tracker dùng link này để tạo link riêng từng bug (`…#ABC-012`).
+- Tracker đã có thì không tạo mới. Một Tracker chứa được nhiều dự án (mỗi dự án 1 `bugPrefix`).
+
+### 3b. Đưa bug lên
 - Thường dùng: mở Tracker → Import → chọn `bugs.json` cùng toàn bộ ảnh trong `upload/`. Tracker tự gán mã `<bugPrefix>-001…`, bỏ qua bug trùng `key`.
 - Session có tool Artifact/ArtifactData: ghi trực tiếp `bugs/{key}` (schema dưới), ảnh upload bằng Artifact `asset: true`.
 
-Schema `bugs/{key}`: `key, code, project, page, path, url, title, group, type, severity, viewports[], browsers[], element, prop, expected, actual, steps, figma{fileKey,nodeId,url}, screenshots[assetId], source (auto|chrome|manual), run, status (open|in-progress|fixed|wontfix|reopened|verified|closed), commentCount, createdAt, updatedAt`
+Schema `bugs/{key}`: `key, code, project, page, path, url, title, group, type, severity (high|medium|low), viewports[], browsers[], env, element, prop, expected, actual, steps, figma{fileKey,nodeId,url}, screenshots[assetId], source (auto|chrome|manual), check, run, status (open|in-progress|fixed|wontfix|reopened|verified|closed), commentCount, createdAt, updatedAt`
 Comment: `bugs/{key}/comments/{id}`: `text, by, byName, at, kind (comment|status), from, to`.
 
-4. Báo người dùng số bug theo nhóm, kèm link Tracker. Sau khi Import, lấy mã bug (<bugPrefix>-xxx) để ghi vào checklist (`qa-checklist-excel`).
+4. Báo người dùng số bug theo nhóm, kèm link Tracker. Checklist chỉ ghi NG, không ghi mã bug (`qa-checklist-excel`).

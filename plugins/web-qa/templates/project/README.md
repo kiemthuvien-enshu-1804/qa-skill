@@ -19,7 +19,12 @@ Dev fix ─► chạy lại + compare_runs → verify.json   Verify bug do teste
 ```
 
 ## Bắt đầu
-1. Cài plugin trên máy (1 lần): trong Claude Code chạy `/plugin marketplace add kiemthuvien-enshu-1804/qa-skill` rồi `/plugin install web-qa@enshu-qa`, sau đó bật auto-update: `/plugin` → Marketplaces → `enshu-qa` → Enable auto-update.
+1. Cài plugin trên máy (1 lần). Lệnh `/plugin` không chạy trong khung chat của extension VS Code, nên dùng terminal PowerShell (cần Claude Code CLI, xem README của repo `qa-skill`):
+   ```powershell
+   claude plugin marketplace add kiemthuvien-enshu-1804/qa-skill
+   claude plugin install web-qa@enshu-qa
+   ```
+   Nên bật auto-update: gõ `claude` → `/plugin` → **Marketplaces** → `enshu-qa` → **Enable auto-update**. Không bật thì tự cập nhật theo mục [Cập nhật](#cập-nhật) khi owner báo có bản mới.
    Nếu mở thư mục này và trust folder, Claude Code sẽ tự nhắc cài.
 2. `npm install && npm run setup` (Playwright Chromium + WebKit; Edge dùng bản đã cài trên máy). Script của plugin dùng thư viện trong `node_modules` ở đây.
 3. Điền thông số dự án (bảng dưới), rồi nói với Claude *"chạy doctor"* và sửa đến khi hết `[FAIL]`.
@@ -50,12 +55,16 @@ qa-<dự-án>/
 ├─ checklist/                  DỰ ÁN — checklist .xlsx + checklist-map.json
 ├─ specs/                      DỰ ÁN — figma-map.json, spec/PNG Figma (tự sinh)
 ├─ flows/                      DỰ ÁN — kịch bản logic Playwright
-├─ cms-seed/                   DỰ ÁN — file seed dữ liệu test CMS + .applied.json
+├─ cms-seed/                   DỰ ÁN — <page>.seed.json + <page>.applied.json (dữ liệu test CMS)
 └─ runs/<ngày-giờ>/            DỰ ÁN — kết quả mỗi lần chạy: bug, ảnh, checklist_result, tester-prompt
 ```
 
 ## Cập nhật
-- Skill/script: tự cập nhật theo plugin (nếu đã bật auto-update), hoặc chạy `/plugin marketplace update enshu-qa`. Không cần copy gì vào thư mục này.
+- Skill/script: đã bật auto-update thì Claude Code tự kéo bản mới khi khởi động (mở phiên mới hoặc Reload Window là có). Không bật thì khi owner báo có bản mới, tự cập nhật bằng một trong hai cách:
+  - VS Code: trang Plugins → tab **Marketplaces** → bấm **↻** ở `enshu-qa`, rồi `Ctrl+Shift+P` → **Developer: Reload Window**.
+  - Terminal: `claude plugin marketplace update enshu-qa` rồi `claude plugin update web-qa@enshu-qa`, sau đó Reload Window.
+
+  Không cần copy gì vào thư mục này.
 - File mẫu (`qa-config.example.json`, `.env.example`, README này): nhờ Claude chạy lại init. Init không đụng tới file của dự án.
 - Muốn sửa kit thì sửa ở repo `qa-skill`, không sửa trong thư mục này.
 
@@ -72,7 +81,7 @@ qa-<dự-án>/
 Scripts tự đọc `.env.local`; `.gitignore` loại nó khỏi git; `.claude/settings.json` chặn Claude đọc nó.
 
 ## Scripts (trong plugin, `${CLAUDE_PLUGIN_ROOT}/scripts/`; Claude gọi qua skill)
-`init`, `doctor`, `figma_api.py`, `measure`, `visual_diff`, `responsive_sweep`, `cms_seed`, `cms_check`, `flow_template`, `make_bugs.py`, `compare_runs.py`, `update_checklist.py`. Chi tiết xem README của repo plugin.
+`init`, `doctor`, `figma_api.py`, `measure`, `visual_diff`, `responsive_sweep`, `cms_seed`, `cms_check`, `page_checks`, `flow_template`, `make_bugs.py`, `compare_runs.py`, `update_checklist.py`. Chi tiết xem README của repo plugin.
 
 ## Giới hạn
 - WebKit ≈ Safari, không phải Safari thật → xác nhận trên Mac/iPhone, ghi vào `manual_bugs.json`.

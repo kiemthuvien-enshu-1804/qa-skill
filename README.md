@@ -35,7 +35,9 @@ claude plugin marketplace add kiemthuvien-enshu-1804/qa-skill
 claude plugin install web-qa@enshu-qa
 claude plugin install app-qa@enshu-qa   # nếu làm webapp
 ```
-Khi owner báo có bản mới, cập nhật theo mục [Cập nhật plugin](#cập-nhật-plugin).
+Sau đó **nên bật cập nhật tự động**: gõ `claude` (hoặc `claude.cmd`) → `/plugin` → **Marketplaces** → `enshu-qa` → **Enable auto-update**. Claude Code mặc định không tự cập nhật marketplace bên thứ ba, nên mỗi máy bật một lần. Đã bật thì mỗi lần khởi động Claude Code sẽ tự kéo bản mới.
+
+**Không bật auto-update** thì phải tự chủ động cập nhật: khi owner báo có bản mới, làm theo mục [Cập nhật plugin](#cập-nhật-plugin).
 
 - Repo private: máy phải có sẵn quyền đọc repo (SSH key trong ssh-agent, hoặc `gh auth login` + `gh auth setup-git`), vì Claude Code không hỏi mật khẩu khi clone.
 - Máy không có SSH key GitHub: đặt biến môi trường `CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`.
@@ -61,7 +63,7 @@ Extension VS Code không có lệnh `claude` trong terminal. Nếu gõ `claude` 
   Sau đó `npm` và `claude` chạy bình thường.
 
 ## Cập nhật plugin
-Làm khi owner báo có bản mới, hoặc khi skill chưa thấy thay đổi mới.
+Đã bật auto-update: chỉ cần mở phiên Claude mới hoặc Reload Window. Làm tay các bước dưới khi **chưa bật auto-update** mà owner báo có bản mới, hoặc khi skill vẫn chạy kiểu cũ.
 
 **Cách nhanh trong VS Code:** trang Plugins → tab **Marketplaces** → bấm **↻** ở `enshu-qa`, rồi `Ctrl+Shift+P` → **Developer: Reload Window**.
 
@@ -113,8 +115,9 @@ Mỗi dự án một thư mục QA riêng, tách khỏi source code. Máy phải
    - `QA_BASIC_USER` / `QA_BASIC_PASS` (nếu có Basic Auth).
    - `QA_TESTER` (tên người test), `QA_SEED_PREFIX` (viết tắt tên, vd `KIM`).
 5. **Kiểm tra:** nói *"chạy doctor"*, bổ sung theo báo lỗi đến khi sạch.
-6. **Bắt đầu test**, vd *"QA trang news"*: spec Figma → pixel → responsive → CMS → flow → bug lên Tracker → checklist. Mục còn trống thì tester kiểm nốt bằng Claude in Chrome (`qa-chrome-verify`).
-7. **Commit thư mục QA** (nếu dự án lưu git).
+6. **Bắt đầu test**, vd *"QA trang news"*. Thứ tự (dữ liệu trước, giao diện sau): `qa-figma-spec` → *(trang có CMS)* `qa-cms-seed` → `qa-cms-data` → `qa-logic-flow` → `qa-pixel-check` → `qa-responsive` → `qa-bug-report` (bug lên Tracker) → `qa-checklist-excel`.
+   Checklist: `OK` = đạt, `NG` = lỗi (**không ghi mã bug vào Excel**), `NA` = trang không có chức năng/khối đó, *để trống* = chưa kiểm được → tester kiểm nốt bằng Claude in Chrome (`qa-chrome-verify`).
+7. **Commit thư mục QA** (khuyến nghị, xem [Có nên commit thư mục QA?](#có-nên-commit-thư-mục-qa)).
 
 ### Webapp — plugin `app-qa`
 1. **Chuẩn bị thông tin:**
@@ -136,7 +139,7 @@ Mỗi dự án một thư mục QA riêng, tách khỏi source code. Máy phải
 5. **Tự điền `.env.local`:** mật khẩu tài khoản test, vd `QA_ADMIN_A_USER` / `QA_ADMIN_A_PASS` (tên biến khớp `accounts` trong `qa-config.json`).
 6. **Kiểm tra:** nói *"chạy doctor"*, bổ sung theo báo lỗi đến khi sạch.
 7. **Bắt đầu test:** `app-testcase` (viết TC → duyệt → import TestRail, tạo Test Run) → `app-testdata` → `app-run-test` → `app-bug-backlog` (duyệt → tạo issue Backlog) → `app-verify-bug` sau khi dev fix.
-8. **Commit thư mục QA** (nếu dự án lưu git).
+8. **Commit thư mục QA** (khuyến nghị, xem [Có nên commit thư mục QA?](#có-nên-commit-thư-mục-qa)).
 
 ### Kiểm tra thư mục đã có plugin chưa
 - **Trong chat:** gõ `/`, phải thấy `web-qa:…` hoặc `app-qa:…`. Không thấy → `Ctrl+Shift+P` → **Developer: Reload Window**.
@@ -145,6 +148,21 @@ Mỗi dự án một thư mục QA riêng, tách khỏi source code. Máy phải
 - **Toàn bộ:** nói *"chạy doctor"*.
 
 `.claude/settings.json` đã khai marketplace + plugin, nên người khác mở thư mục và trust folder là được nhắc cài plugin.
+
+### Có nên commit thư mục QA?
+**Nên**, vào một repo **private** (checklist, ảnh Figma có thể là tài liệu của khách hàng). Lợi ích: cả team dùng chung `qa-config.json`, và regression sau khi dev fix chạy lại đúng spec, flow, seed của lần test trước.
+
+| Commit | Không commit (đã có trong `.gitignore`) |
+|---|---|
+| `qa-config.json`, `.claude/settings.json`, `package.json` | `.env.local`, `.env` (key, mật khẩu) |
+| `specs/` (spec JSON, `figma-map.json`, PNG Figma, `notes.md`) | `runs/` (kết quả từng lần chạy, sinh lại được) |
+| `flows/`, `cms-seed/`, `checklist/` (file `.xlsx` + `checklist-map.json`) | `node_modules/` |
+
+Bug nằm trên Tracker, kết quả từng lần chạy nằm trong `runs/`, nên không cần commit `runs/`. Cần giữ bằng chứng thì gửi file `_result.xlsx` / link Tracker cho người liên quan.
+
+### Thư mục QA đã tạo từ trước
+Khi plugin có bản mới, file mẫu trong thư mục QA cũ (`README.md`, `qa-config.example.json`, `.env.example`) không tự đổi theo. Sau khi cập nhật plugin, mở thư mục đó và nói với Claude *"chạy lại init"*. Init chỉ làm mới các file mẫu, không đụng `qa-config.json`, `.env.local` hay dữ liệu dự án.
+- `.gitignore` là file của dự án nên init **không** sửa. Thư mục cũ muốn commit dữ liệu QA thì tự xoá các dòng `qa-config.json`, `specs/*`, `checklist/*`, `flows/*`, `cms-seed/*` trong `.gitignore` (giữ `.env*`, `node_modules/`, `runs/`).
 
 ## Chuyển dự án đang dùng bản copy cũ (`.claude/skills/` trong thư mục dự án)
 1. Cài plugin như trên.
@@ -167,10 +185,10 @@ Mỗi dự án một thư mục QA riêng, tách khỏi source code. Máy phải
 | `qa-figma-spec` | spec SP/PC + PNG + Figma comments |
 | `qa-cms-seed` | tạo/dọn dữ liệu test `[PREFIX001]` trên microCMS dev |
 | `qa-cms-data` | dữ liệu CMS API ↔ trang |
-| `qa-logic-flow` | logic Playwright (filter, pagination, form validation…) |
+| `qa-logic-flow` | check chung mọi trang (OGP, GTM, tel, ảnh, link, breadcrumb, 404) + flow riêng (menu, slider, filter, pagination, form validation…) |
 | `qa-pixel-check` | đo px so với Figma, diff ảnh |
 | `qa-responsive` | 360→1920 × Chrome/Edge/WebKit |
-| `qa-bug-report` | bugs.json → Bug Tracker |
+| `qa-bug-report` | bugs.json → Bug Tracker (tiếng Việt, severity high/medium/low; chưa có Tracker thì tạo mới) |
 | `qa-checklist-excel` | điền checklist Excel + prompt cho tester |
 | `qa-chrome-verify` | phần tester: Claude in Chrome kiểm nốt / verify |
 | `qa-verify-regression` | chạy lại sau khi dev fix |

@@ -1,0 +1,544 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>QA Bug Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: sticky toolbar + filter rail over a dense bug list; detail opens as a side sheet (full screen on phones). */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --sunk:#e9edf1; --line:#d5dbe2; --fg:#18222d; --muted:#5d6b7a;
+  --accent:#2457c5; --accent-ink:#ffffff; --accent-soft:#e3ebfb;
+  --hi:#c8333b; --mid:#c27a0a; --lo:#5d6b7a;
+  --s-open:#c8333b; --s-prog:#7a4fd0; --s-fixed:#2457c5; --s-wont:#6b7480; --s-reopen:#d4572a; --s-ver:#1f8a55; --s-closed:#46515c;
+  --font:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --surface:#18202a; --sunk:#0d1217; --line:#2a3542; --fg:#e4e9ef; --muted:#93a1b0;
+  --accent:#6f9bff; --accent-ink:#0b1424; --accent-soft:#1d2b47;
+  --hi:#ff6b6f; --mid:#f0a93b; --lo:#93a1b0;
+  --s-open:#ff6b6f; --s-prog:#ad8cff; --s-fixed:#6f9bff; --s-wont:#8b95a1; --s-reopen:#ff8a5c; --s-ver:#4cc98a; --s-closed:#9aa6b2;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --surface:#18202a; --sunk:#0d1217; --line:#2a3542; --fg:#e4e9ef; --muted:#93a1b0;
+  --accent:#6f9bff; --accent-ink:#0b1424; --accent-soft:#1d2b47;
+  --hi:#ff6b6f; --mid:#f0a93b; --lo:#93a1b0;
+  --s-open:#ff6b6f; --s-prog:#ad8cff; --s-fixed:#6f9bff; --s-wont:#8b95a1; --s-reopen:#ff8a5c; --s-ver:#4cc98a; --s-closed:#9aa6b2;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding-block:12px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;min-width:0}
+.brand h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.01em}
+.brand .proj{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 12px;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+select.btn{padding-right:28px}
+
+.stats{display:flex;flex-wrap:wrap;gap:6px;padding-block:0 12px}
+.stat{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:3px 10px 3px 8px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px}
+.stat .dot{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.stat b{font-family:var(--mono);font-weight:600}
+.stat[aria-pressed="true"]{border-color:var(--c);background:var(--surface);box-shadow:inset 0 0 0 1px var(--c)}
+
+.filters{display:flex;flex-wrap:wrap;gap:8px;padding-block:12px}
+.filters input[type=search]{flex:1 1 220px;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 10px}
+.filters select{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 8px;max-width:100%}
+
+main{padding-block:4px 48px}
+.group{margin-top:18px}
+.group h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;display:flex;gap:8px;align-items:baseline}
+.group h2 span{font-family:var(--mono);letter-spacing:0}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{display:grid;grid-template-columns:4px 92px minmax(0,1fr) auto;gap:0 12px;align-items:center;padding:10px 12px 10px 0;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left}
+.row:first-child{border-top:0}
+.row:hover{background:var(--accent-soft)}
+.sev{align-self:stretch;background:var(--lo)}
+.sev.high{background:var(--hi)}.sev.medium{background:var(--mid)}
+.code{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.title{min-width:0}
+.title .t{font-weight:500;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--muted);margin-top:2px}
+.meta .mono{font-size:11.5px}
+.projchip{font-family:var(--mono);font-size:11px;padding:0 6px;border-radius:4px;background:var(--sunk);color:var(--fg)}
+.projbar{display:flex;flex-wrap:wrap;gap:6px;padding-block:0 12px}
+.projbar button{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:4px 10px;font-size:12.5px;display:inline-flex;gap:6px;align-items:baseline}
+.projbar button b{font-family:var(--mono);font-weight:600}
+.projbar button .o{color:var(--hi);font-family:var(--mono);font-size:11.5px}
+.projbar button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);font-weight:600}
+.right{display:flex;align-items:center;gap:10px}
+.cc{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);background:color-mix(in srgb,var(--c) 10%,transparent);white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:28px 20px;text-align:center;color:var(--muted);background:var(--surface);margin-top:18px}
+.empty b{color:var(--fg)}
+.note{font-size:12.5px;color:var(--muted)}
+.notice{margin-top:12px;padding:8px 12px;border-radius:var(--r);background:var(--accent-soft);font-size:13px}
+
+/* detail sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,15,20,.38);z-index:40}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(720px,100%);z-index:41;background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.sheet-head{display:flex;gap:10px;align-items:flex-start;padding:14px 18px;border-bottom:1px solid var(--line)}
+.sheet-head h3{margin:0;font-size:17px;line-height:1.4;text-wrap:balance;overflow-wrap:anywhere;flex:1;min-width:0}
+.sheet-body{overflow:auto;padding:16px 18px 32px;display:flex;flex-direction:column;gap:18px}
+.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 12px;font-size:13px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp>div{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;min-width:0}
+.cmp h4{margin:0 0 4px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cmp pre{margin:0;white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;overflow-wrap:anywhere}
+.cmp .act{border-color:color-mix(in srgb,var(--hi) 50%,var(--line))}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.shots a{display:block;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--sunk)}
+.shots img{display:block;width:100%;height:auto}
+.status-row{display:flex;flex-wrap:wrap;gap:6px}
+.status-row button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:12.5px}
+.status-row button[aria-pressed="true"]{border-color:var(--c);color:var(--c);box-shadow:inset 0 0 0 1px var(--c);font-weight:600}
+.sec-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.thread{display:flex;flex-direction:column;gap:10px}
+.cmt{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px}
+.cmt img{width:28px;height:28px;border-radius:50%}
+.cmt .who{font-size:12.5px;color:var(--muted)}.cmt .who b{color:var(--fg);font-weight:600}
+.cmt .txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.cmt.sys .txt{color:var(--muted);font-size:13px}
+textarea{width:100%;min-height:76px;border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;background:var(--bg);resize:vertical}
+.compose{display:flex;flex-direction:column;gap:8px}
+.compose .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);padding:0;width:min(560px,calc(100% - 32px))}
+dialog::backdrop{background:rgba(10,15,20,.4)}
+dialog form{padding:18px;display:flex;flex-direction:column;gap:12px}
+dialog h3{margin:0;font-size:16px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:var(--r);padding:6px 10px;background:var(--bg)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:60;font-size:13px;max-width:calc(100% - 32px)}
+
+@media (max-width:640px){
+  .row{grid-template-columns:4px minmax(0,1fr);grid-template-areas:"s c" "s t" "s r";gap:2px 10px}
+  .row .sev{grid-area:s}.row .code{grid-area:c}.row .title{grid-area:t}.row .right{grid-area:r;margin-top:4px}
+  .cmp,.two{grid-template-columns:1fr}
+  .kv{grid-template-columns:90px minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:no-preference){.row{transition:background .12s}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <div class="brand"><h1>QA Bug Tracker</h1><span class="proj" id="projLabel"></span></div>
+      <button class="btn" id="newBtn" hidden>+ Bug</button>
+      <button class="btn" id="importBtn" hidden>Import</button>
+      <button class="btn" id="exportJson" hidden>Export JSON</button>
+      <button class="btn" id="exportCsv" hidden>Export CSV</button>
+    </div>
+    <div class="projbar" id="projbar" aria-label="Dự án"></div>
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="filters">
+    <select id="projSel" aria-label="Dự án" style="font-weight:600"></select>
+    <input type="search" id="q" placeholder="Tìm mã bug, tiêu đề, selector…" aria-label="Tìm kiếm">
+    <select id="fPage" aria-label="Trang"></select>
+    <select id="fGroup" aria-label="Nhóm">
+      <option value="">Mọi nhóm</option><option value="common">Chung SP + PC</option><option value="sp">Chỉ SP</option><option value="pc">Chỉ PC</option><option value="responsive">Responsive</option>
+    </select>
+    <select id="fSev" aria-label="Mức độ"><option value="">Mọi mức độ</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+    <select id="fSource" aria-label="Kiểm bằng"><option value="">Mọi nguồn</option><option value="auto">Tự động (VS Code)</option><option value="chrome">Claude in Chrome</option><option value="manual">Kiểm tay</option></select>
+    <select id="fType" aria-label="Loại"><option value="">Mọi loại</option><option value="cms">Dữ liệu CMS</option><option value="logic">Logic</option><option value="layout">Layout</option><option value="typography">Typography</option><option value="color">Màu</option><option value="component">Component</option><option value="responsive">Responsive</option><option value="content">Nội dung</option><option value="tracking">Tracking</option><option value="figma-comment">Figma comment</option></select>
+    <select id="fBrowser" aria-label="Trình duyệt"><option value="">Mọi browser</option><option value="chromium">Chrome</option><option value="msedge">Edge</option><option value="webkit">Safari / WebKit</option></select>
+  </div>
+  <div id="notice" class="notice" hidden></div>
+  <main id="main">
+    <div class="empty" id="loading"><b>Đang tải danh sách bug…</b><br><span class="note">Bug được import từ <span class="mono">bugs.json</span> do bộ skill QA tạo, hoặc thêm tay bằng nút “+ Bug”.</span></div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden aria-modal="true" role="dialog" aria-labelledby="dTitle"></aside>
+
+<dialog id="importDlg">
+  <form method="dialog" id="importForm">
+    <h3>Import bug</h3>
+    <p class="note" style="margin:0">Chọn cùng lúc <span class="mono">bugs.json</span> (hoặc <span class="mono">verify.json</span>) và các ảnh trong thư mục <span class="mono">upload/</span>. Bug đã có (trùng key) được bỏ qua; mục <span class="mono">updates</span> đổi status và thêm comment.</p>
+    <div class="field"><label for="importFiles">File</label><input type="file" id="importFiles" multiple accept=".json,image/png,image/jpeg,image/webp"></div>
+    <div id="importLog" class="note mono" style="white-space:pre-wrap;max-height:160px;overflow:auto"></div>
+    <div class="compose"><div class="actions"><button class="btn" value="cancel" formnovalidate>Đóng</button><button class="btn primary" id="importGo" type="button">Import</button></div></div>
+  </form>
+</dialog>
+
+<dialog id="newDlg">
+  <form id="newForm">
+    <h3>Thêm bug</h3>
+    <div class="two">
+      <div class="field"><label for="nProject">Dự án</label><select id="nProject"></select></div>
+      <div class="field" id="nNewWrap" hidden><label for="nNewName">Tên dự án mới · prefix</label><div style="display:flex;gap:6px"><input id="nNewName" placeholder="la-class" style="flex:1;min-width:0"><input id="nNewPrefix" placeholder="LC" style="width:70px"></div></div>
+    </div>
+    <div class="field"><label for="nTitle">Tiêu đề</label><input id="nTitle" required></div>
+    <div class="two">
+      <div class="field"><label for="nPath">Trang (path)</label><input id="nPath" placeholder="/residence/news" required></div>
+      <div class="field"><label for="nGroup">Nhóm</label><select id="nGroup"><option value="common">Chung SP + PC</option><option value="sp">Chỉ SP</option><option value="pc">Chỉ PC</option><option value="responsive">Responsive</option></select></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="nSev">Mức độ</label><select id="nSev" title="High: chặn chức năng/luồng chính, sai dữ liệu, lỗi console làm hỏng trang. Medium: sai so với Figma/spec dễ thấy, không chặn chức năng. Low: lệch nhỏ, thẩm mỹ, tối ưu."><option value="high">High — chặn chức năng / sai dữ liệu</option><option value="medium" selected>Medium — sai design/spec dễ thấy</option><option value="low">Low — lệch nhỏ, tối ưu</option></select></div>
+      <div class="field"><label for="nSource">Kiểm bằng</label><select id="nSource"><option value="chrome">Claude in Chrome</option><option value="manual">Kiểm tay</option><option value="auto">Tự động (VS Code)</option></select></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="nBrowser">Browser</label><select id="nBrowser"><option value="chromium">Chrome</option><option value="msedge">Edge</option><option value="webkit">Safari</option></select></div>
+      <div class="field"><label for="nVp">Width (px)</label><input id="nVp" inputmode="numeric" placeholder="1536"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="nEnv">Môi trường (chỉ khi lỗi riêng 1 môi trường)</label><input id="nEnv" placeholder="Safari 18 · iPhone 15 (iOS 18)"></div>
+      <div class="field"><label for="nType">Loại</label><select id="nType"><option>layout</option><option>typography</option><option>color</option><option>component</option><option>content</option><option>logic</option><option>figma-comment</option><option>responsive</option><option>cms</option><option>tracking</option></select></div>
+    </div>
+    <div class="field"><label for="nExp">Figma / mong đợi</label><textarea id="nExp"></textarea></div>
+    <div class="field"><label for="nAct">Thực tế</label><textarea id="nAct"></textarea></div>
+    <div class="field"><label for="nSteps">Cách tái hiện</label><textarea id="nSteps"></textarea></div>
+    <div class="field"><label for="nShots">Ảnh / GIF</label><input type="file" id="nShots" multiple accept="image/png,image/jpeg,image/webp,image/gif"></div>
+    <div class="compose"><div class="actions"><button class="btn" type="button" id="newCancel">Huỷ</button><button class="btn primary" type="submit">Tạo bug</button></div></div>
+  </form>
+</dialog>
+
+<dialog id="linkDlg">
+  <form id="linkForm">
+    <h3>Link chia sẻ của tracker</h3>
+    <p class="note" style="margin:0">Dán link artifact này (nút Share → Copy link). Tracker dùng nó để tạo link riêng từng bug, ví dụ <span class="mono">…#LC-012</span>.</p>
+    <div class="field"><label for="shareUrl">Link</label><input id="shareUrl" placeholder="https://claude.ai/…"></div>
+    <div class="compose"><div class="actions"><button class="btn" type="button" id="linkCancel">Huỷ</button><button class="btn primary" type="submit">Lưu</button></div></div>
+  </form>
+</dialog>
+
+<script>
+const STATUS = [
+  ["open","open","--s-open"],["in-progress","in-progress","--s-prog"],["fixed","fixed","--s-fixed"],["wontfix","wontfix","--s-wont"],
+  ["reopened","reopened","--s-reopen"],["verified","verified","--s-ver"],["closed","closed","--s-closed"]];
+const SMAP = Object.fromEntries(STATUS.map(s=>[s[0],s]));
+const GROUPS = [["common","Chung SP + PC"],["sp","Chỉ SP"],["pc","Chỉ PC"],["responsive","Responsive"],["other","Khác"]];
+const BNAME = {chromium:"Chrome",chrome:"Chrome",msedge:"Edge",webkit:"Safari/WebKit",safari:"Safari",firefox:"Firefox"};
+const SEVR = {high:0,medium:1,low:2};
+
+let savedProject=""; try{ savedProject=localStorage.getItem("qa.project")||""; }catch{}
+const state = {bugs:[], registry:{}, project:savedProject, statusFilter:"", open:null, me:null, isEditor:false, canWrite:true, settings:{}, loaded:false};
+let db=null, user=null, assets=null, downloads=null, unsubComments=null, comments=[];
+
+const $ = s=>document.querySelector(s);
+function h(tag, attrs={}, ...kids){
+  const e=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs||{})){
+    if(v==null||v===false) continue;
+    if(k==="class") e.className=v; else if(k==="style") e.style.cssText=v;
+    else if(k.startsWith("on")) e.addEventListener(k.slice(2),v);
+    else e.setAttribute(k, v===true?"":v);
+  }
+  for(const k of kids.flat()){ if(k==null||k===false) continue; e.append(k instanceof Node?k:document.createTextNode(String(k))); }
+  return e;
+}
+function pill(st){ const s=SMAP[st]||SMAP.open; return h("span",{class:"pill",style:`--c:var(${s[2]})`},s[1]); }
+function toast(msg){ const t=h("div",{class:"toast",role:"status"},msg); document.body.append(t); setTimeout(()=>t.remove(),2600); }
+function nowIso(){ return new Date().toISOString(); }
+function fmtDate(s){ try{ const d=new Date(s); return d.toLocaleString("vi-VN",{dateStyle:"short",timeStyle:"short"});}catch{return s||""} }
+function notice(msg){ const n=$("#notice"); n.textContent=msg||""; n.hidden=!msg; }
+
+/* ---------- boot ---------- */
+(async function boot(){
+  const timer=setTimeout(()=>{ if(!state.loaded) notice("Chưa kết nối được dữ liệu. Kiểm tra mạng hoặc đăng nhập claude.ai rồi tải lại trang."); },10000);
+  [db,user,assets,downloads] = await Promise.all(["db","user","assets","downloads"].map(n=>claude.use(n).catch(()=>null)));
+  if(user){ state.me = await user.id(); state.isEditor = await user.canEdit(); const cw=await user.can("data.write"); if(cw===false) state.canWrite=false; }
+  if(!db){ clearTimeout(timer); $("#loading").replaceChildren(h("b",{},"Không mở được dữ liệu bug."), h("br"), h("span",{class:"note"},"Hãy đăng nhập claude.ai bằng tài khoản được chia sẻ link này.")); return; }
+  $("#newBtn").hidden = !state.canWrite;
+  const canAssetsAdmin = user ? ((await user.can("assets.write")) ?? state.isEditor) : false;
+  $("#importBtn").hidden = !(assets && canAssetsAdmin);   // QA lead (editor) only
+  $("#exportJson").hidden = $("#exportCsv").hidden = !downloads;
+  db.doc("meta/settings").onSnapshot(s=>{ state.settings=s.exists?s.data():{}; },()=>{});
+  db.collection("projects").onSnapshot(s=>{ state.registry=Object.fromEntries(s.docs.map(d=>[d.data().name,d.data()])); if(state.loaded) renderAll(); },()=>{});
+  db.collection("bugs").onSnapshot(snap=>{
+    state.loaded=true; clearTimeout(timer); if(!snap.metadata.fromCache) notice("");
+    state.bugs = snap.docs.map(d=>({...d.data(), _id:d.id}));
+    renderAll();
+    if(state.open){ const b=state.bugs.find(x=>x._id===state.open); if(b) renderSheet(b); }
+    else openFromHash();
+  }, e=>{ clearTimeout(timer); notice("Không tải được danh sách bug ("+e.code+")."); });
+})();
+
+/* ---------- list ---------- */
+function projects(){ return [...new Set([...Object.keys(state.registry), ...state.bugs.map(b=>b.project||"—")])].sort(); }
+function prefixOf(p){ const r=state.registry[p]; if(r&&r.prefix) return r.prefix; const b=state.bugs.find(x=>(x.project||"—")===p&&x.code); return b? String(b.code).split("-")[0] : "BUG"; }
+function projSlug(p){ return (String(p).replace(/[^A-Za-z0-9_-]/g,"-").replace(/-+/g,"-").slice(0,60))||("p"+Date.now()); }
+function setProject(p){ state.project=p; try{ localStorage.setItem("qa.project",p); }catch{} renderAll(); }
+async function registerProject(name,prefix){
+  if(!name||state.registry[name]) return;
+  const clash=Object.values(state.registry).find(r=>r.prefix===prefix);
+  if(clash) throw new Error(`Prefix ${prefix} đã dùng cho dự án ${clash.name}`);
+  await db.doc("projects/"+projSlug(name)).set({name,prefix,createdAt:nowIso()});
+  state.registry[name]={name,prefix};
+}
+function inProject(b){ return !state.project || (b.project||"—")===state.project; }
+function filtered(){
+  const q=$("#q").value.trim().toLowerCase(), pg=$("#fPage").value, g=$("#fGroup").value, sv=$("#fSev").value, br=$("#fBrowser").value, src=$("#fSource").value, ty=$("#fType").value;
+  return state.bugs.filter(b=>inProject(b)
+    && (!state.statusFilter || (b.status||"open")===state.statusFilter)
+    && (!pg || b.path===pg) && (!g || b.group===g) && (!sv || b.severity===sv)
+    && (!src || (b.source||"manual")===src) && (!ty || b.type===ty)
+    && (!br || (b.browsers||[]).some(x=>x===br || (br==="chromium"&&x==="chrome")))
+    && (!q || [b.code,b.title,b.element,b.path,b.actual].join(" ").toLowerCase().includes(q)));
+}
+function renderAll(){
+  const ps=projects();
+  if(state.project && !ps.includes(state.project)) state.project="";
+  const openOf=p=>state.bugs.filter(b=>(p===""||(b.project||"—")===p)&&["open","reopened","in-progress"].includes(b.status||"open")).length;
+  const totalOf=p=>state.bugs.filter(b=>p===""||(b.project||"—")===p).length;
+  $("#projSel").replaceChildren(h("option",{value:"",selected:!state.project},`Tất cả dự án (${totalOf("")})`), ...ps.map(p=>h("option",{value:p,selected:p===state.project},`${p} · ${prefixOf(p)} (${totalOf(p)})`)));
+  $("#projSel").hidden = ps.length<1;
+  $("#projLabel").textContent = "";
+  $("#projbar").hidden = ps.length<1;
+  $("#projbar").replaceChildren(...["",...ps].map(p=>h("button",{"aria-pressed":String(state.project===p),title:p?`Prefix ${prefixOf(p)}`:"Mọi dự án",onclick:()=>setProject(p)},
+    p||"Tất cả", h("b",{},totalOf(p)), openOf(p)?h("span",{class:"o",title:"Đang mở"},openOf(p)+" mở"):null)));
+  const inP=state.bugs.filter(inProject);
+  const pages=[...new Set(inP.map(b=>b.path).filter(Boolean))].sort();
+  const curPg=$("#fPage").value;
+  $("#fPage").replaceChildren(h("option",{value:""},"Mọi trang"), ...pages.map(p=>h("option",{value:p,selected:p===curPg},p)));
+  // stats
+  const cnt={}; inP.forEach(b=>{const s=b.status||"open"; cnt[s]=(cnt[s]||0)+1;});
+  $("#stats").replaceChildren(
+    h("button",{class:"stat",style:"--c:var(--accent)","aria-pressed":String(!state.statusFilter),onclick:()=>{state.statusFilter="";renderAll();}},"Tất cả ",h("b",{},inP.length)),
+    ...STATUS.map(([k,l,c])=>h("button",{class:"stat",style:`--c:var(${c})`,"aria-pressed":String(state.statusFilter===k),onclick:()=>{state.statusFilter=state.statusFilter===k?"":k;renderAll();}},h("span",{class:"dot"}),l,h("b",{},cnt[k]||0))));
+  renderList();
+}
+function renderList(){
+  const main=$("#main"); const list=filtered();
+  if(!state.bugs.length){
+    main.replaceChildren(h("div",{class:"empty"},h("b",{},"Chưa có bug nào."),h("br"),
+      h("span",{class:"note"}, assets? "Bấm Import và chọn bugs.json cùng ảnh trong upload/ (do skill qa-bug-report tạo), hoặc thêm tay bằng “+ Bug”." : "QA sẽ đưa bug lên đây. Khi có bug, bấm vào từng dòng để xem chi tiết, đổi trạng thái và comment.")));
+    return;
+  }
+  if(!list.length){ main.replaceChildren(h("div",{class:"empty"},"Không có bug khớp bộ lọc.")); return; }
+  const by={}; list.forEach(b=>{ const g=GROUPS.some(x=>x[0]===b.group)?b.group:"other"; (by[g]||=[]).push(b); });
+  main.replaceChildren(...GROUPS.filter(([k])=>by[k]).map(([k,label])=>{
+    const items=by[k].sort((a,b)=>(SEVR[a.severity]??3)-(SEVR[b.severity]??3) || String(a.code).localeCompare(String(b.code),undefined,{numeric:true}));
+    return h("section",{class:"group"},h("h2",{},label,h("span",{},items.length)),
+      h("div",{class:"list"},...items.map(rowEl)));
+  }));
+}
+function rowEl(b){
+  const vps=(b.viewports||[]); const vpTxt=vps.length>2? `${vps[0]}–${vps[vps.length-1]}px` : vps.map(v=>v+"px").join(", ");
+  return h("button",{class:"row",onclick:()=>openBug(b._id)},
+    h("span",{class:"sev "+(b.severity||"low"),title:"Mức độ: "+(b.severity||"")}),
+    h("span",{class:"code"},b.code||"—"),
+    h("span",{class:"title"},h("div",{class:"t"},b.title||"(không tiêu đề)"),
+      h("div",{class:"meta"},!state.project?h("span",{class:"projchip"},b.project||"—"):null,h("span",{class:"mono"},b.path||b.page||""), vpTxt&&h("span",{},vpTxt), (b.browsers||[]).length?h("span",{},(b.browsers||[]).map(x=>BNAME[x]||x).join(" · ")):null, b.type&&h("span",{},b.type))),
+    h("span",{class:"right"}, b.commentCount?h("span",{class:"cc",title:"Số comment"},b.commentCount+" cmt"):null, pill(b.status||"open")));
+}
+["#q","#fPage","#fGroup","#fSev","#fBrowser","#fSource","#fType"].forEach(s=>$(s).addEventListener("input",renderList));
+$("#projSel").addEventListener("change",e=>setProject(e.target.value));
+
+/* ---------- detail ---------- */
+function openFromHash(){
+  const code=decodeURIComponent(location.hash.slice(1)); if(!code) return;
+  const b=state.bugs.find(x=>x.code===code||x._id===code); if(b && state.open!==b._id) openBug(b._id,true);
+}
+window.addEventListener("hashchange",()=>{ if(!location.hash) closeBug(true); else openFromHash(); });
+function openBug(id,fromHash){
+  const b=state.bugs.find(x=>x._id===id); if(!b) return;
+  state.open=id;
+  if(!fromHash && b.code && /^[A-Za-z0-9-]+$/.test(b.code)) history.replaceState(null,"","#"+b.code);
+  $("#scrim").hidden=false; $("#sheet").hidden=false;
+  comments=[]; renderSheet(b);
+  if(unsubComments) unsubComments();
+  unsubComments=db.collection(`bugs/${id}/comments`).orderBy("at").onSnapshot(s=>{ comments=s.docs.map(d=>d.data()); const cur=state.bugs.find(x=>x._id===state.open); if(cur) renderThread(); },()=>{});
+}
+function closeBug(fromHash){
+  state.open=null; $("#scrim").hidden=true; $("#sheet").hidden=true;
+  if(unsubComments){unsubComments(); unsubComments=null;}
+  if(!fromHash && location.hash) history.replaceState(null,"",location.pathname+location.search);
+}
+$("#scrim").addEventListener("click",()=>closeBug());
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && state.open) closeBug(); });
+
+function renderSheet(b){
+  const sheet=$("#sheet");
+  const fig=b.figma&&b.figma.url;
+  const shots=(b.screenshots||[]).filter(Boolean);
+  sheet.replaceChildren(
+    h("div",{class:"sheet-head"},
+      h("div",{style:"flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"},
+        h("div",{style:"display:flex;gap:8px;align-items:center;flex-wrap:wrap"},h("span",{class:"code"},b.code||""),pill(b.status||"open"),h("span",{class:"note"},"· "+(b.severity||"")+" · "+(GROUPS.find(g=>g[0]===b.group)||["","" ])[1])),
+        h("h3",{id:"dTitle"},b.title||"")),
+      h("button",{class:"btn",onclick:()=>copyLink(b),title:"Copy link bug này"},"Copy link"),
+      h("button",{class:"btn","aria-label":"Đóng",onclick:()=>closeBug()},"✕")),
+    h("div",{class:"sheet-body"},
+      h("div",{},h("p",{class:"sec-title"},"Trạng thái"),
+        h("div",{class:"status-row"},...STATUS.map(([k,l,c])=>h("button",{style:`--c:var(${c})`,"aria-pressed":String((b.status||"open")===k),disabled:!state.canWrite,onclick:()=>setStatus(b,k)},l)))),
+      h("dl",{class:"kv"},
+        kv("Trang", b.url? h("a",{href:b.url,target:"_blank",rel:"noopener"},b.path||b.url) : (b.path||b.page)),
+        kv("Viewport",(b.viewports||[]).map(v=>v+"px").join(", ")),
+        kv("Browser",(b.browsers||[]).map(x=>BNAME[x]||x).join(", ")),
+        kv("Môi trường", b.env),
+        kv("Element", b.element? h("span",{class:"mono"},b.element):null),
+        kv("Loại", b.type==='cms'?'Dữ liệu CMS':b.type), kv("Kiểm bằng", {auto:"Tự động (VS Code / Playwright)",chrome:"Claude in Chrome",manual:"Kiểm tay"}[b.source||"manual"]), kv("Figma", fig? h("a",{href:fig,target:"_blank",rel:"noopener"},"Mở node "+(b.figma.nodeId||"")) : null),
+        kv("Lần chạy", b.run), kv("Tạo lúc", fmtDate(b.createdAt))),
+      (b.expected||b.actual)? h("div",{class:"cmp"},
+        h("div",{},h("h4",{},"Figma / mong đợi"),h("pre",{},b.expected||"—")),
+        h("div",{class:"act"},h("h4",{},"Thực tế"),h("pre",{},b.actual||"—"))):null,
+      b.steps? h("div",{},h("p",{class:"sec-title"},"Cách tái hiện"),h("div",{style:"white-space:pre-wrap"},b.steps)):null,
+      shots.length? h("div",{},h("p",{class:"sec-title"},"Ảnh"),h("div",{class:"shots"},...shots.map(id=>h("a",{href:"/_blob/"+id,target:"_blank",rel:"noopener"},h("img",{src:"/_blob/"+id,alt:"Ảnh bug "+(b.code||""),loading:"lazy",onerror:"this.alt='Ảnh không tải được'"}))))):null,
+      h("div",{},h("p",{class:"sec-title"},"Trao đổi"),h("div",{class:"thread",id:"thread"})),
+      state.canWrite? h("div",{class:"compose"},
+        h("textarea",{id:"cmtText",placeholder:"Comment cho QA / dev… (dev: ghi rõ đã sửa gì, commit/branch nếu có)"}),
+        h("div",{class:"actions"},
+          h("button",{class:"btn",type:"button",onclick:()=>sendComment(b,"fixed")},"Comment + fixed"),
+          h("button",{class:"btn primary",type:"button",onclick:()=>sendComment(b)},"Gửi comment"))) : h("p",{class:"note"},"Bạn đang xem ở quyền chỉ đọc. Nhờ chủ tracker chia sẻ quyền Contributor để đổi trạng thái và comment."))
+  );
+  renderThread();
+}
+function kv(k,v){ if(v==null||v==="") return null; return [h("dt",{},k),h("dd",{},v)]; }
+async function renderThread(){
+  const t=$("#thread"); if(!t) return;
+  if(!comments.length){ t.replaceChildren(h("p",{class:"note",style:"margin:0"},"Chưa có comment.")); return; }
+  const ids=[...new Set(comments.map(c=>c.by).filter(Boolean))];
+  const ps= user&&ids.length? await user.profiles(ids) : {};
+  t.replaceChildren(...comments.map(c=>{
+    const p=c.by&&ps[c.by]; const name=(p&&p.name)||c.byName||"Ai đó";
+    const av=p? p.avatarUrl : "data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><rect width="28" height="28" rx="14" fill="#2457c5"/><text x="14" y="18" font-size="11" text-anchor="middle" fill="#fff" font-family="sans-serif">QA</text></svg>');
+    const sys=c.kind==="status";
+    return h("div",{class:"cmt"+(sys?" sys":"")},h("img",{src:av,alt:""}),
+      h("div",{},h("div",{class:"who"},h("b",{},name)," · "+fmtDate(c.at)),
+        sys? h("div",{class:"txt"},"Đổi trạng thái: ",pill(c.from||"open")," → ",pill(c.to), c.text?"\n"+c.text:"") : h("div",{class:"txt"},c.text)));
+  }));
+}
+let busy=false;
+async function setStatus(b,to,note){
+  const from=b.status||"open"; if(from===to && !note) return; if(busy) return; busy=true;
+  try{
+    await db.doc("bugs/"+b._id).update({status:to,updatedAt:nowIso()});
+    await db.collection(`bugs/${b._id}/comments`).add({kind:"status",from,to,text:note||"",by:state.me,at:nowIso()});
+    await db.doc("bugs/"+b._id).update({commentCount:(b.commentCount||0)+1});
+    toast(`${b.code||"Bug"}: ${SMAP[to][1]}`);
+  }catch(e){ toast(e.code==="invalid_argument"?"Bạn không có quyền đổi trạng thái.":"Lưu không được, thử lại."); }
+  finally{ busy=false; }
+}
+async function sendComment(b,thenStatus){
+  const ta=$("#cmtText"); const text=ta.value.trim();
+  if(thenStatus){ await setStatus(b,thenStatus,text); ta.value=""; return; }
+  if(!text||busy) return; busy=true;
+  try{
+    await db.collection(`bugs/${b._id}/comments`).add({kind:"comment",text,by:state.me,at:nowIso()});
+    await db.doc("bugs/"+b._id).update({commentCount:(b.commentCount||0)+1,updatedAt:nowIso()});
+    ta.value=""; toast("Đã gửi comment");
+  }catch(e){ toast(e.code==="invalid_argument"?"Bạn không có quyền comment.":"Gửi không được, thử lại."); }
+  finally{ busy=false; }
+}
+async function copyLink(b){
+  const base=state.settings.shareUrl;
+  if(!base){ if(state.canWrite){ $("#shareUrl").value=""; $("#linkDlg").showModal(); } else toast("Chưa cấu hình link tracker — gửi mã "+(b.code||"")+" cho QA."); return; }
+  const link=base.split("#")[0]+"#"+(b.code||b._id);
+  try{ await navigator.clipboard.writeText(link); toast("Đã copy link "+(b.code||"")); }
+  catch{ toast(link); }
+}
+$("#linkForm").addEventListener("submit",async e=>{ e.preventDefault(); const v=$("#shareUrl").value.trim(); if(!/^https:\/\//.test(v)){toast("Link phải bắt đầu bằng https://");return;}
+  try{ await db.doc("meta/settings").set({...state.settings,shareUrl:v}); state.settings.shareUrl=v; $("#linkDlg").close(); toast("Đã lưu link"); }catch{ toast("Không lưu được link."); } });
+$("#linkCancel").addEventListener("click",()=>$("#linkDlg").close());
+
+/* ---------- codes ---------- */
+function nextCodeFn(prefix){
+  let n=0; const re=new RegExp("^"+prefix.replace(/[^A-Za-z0-9]/g,"")+"-(\\d+)$");
+  state.bugs.forEach(b=>{ const m=re.exec(b.code||""); if(m) n=Math.max(n,+m[1]); });
+  return ()=> `${prefix}-${String(++n).padStart(3,"0")}`;
+}
+
+/* ---------- import ---------- */
+$("#importBtn").addEventListener("click",()=>{ $("#importLog").textContent=""; $("#importFiles").value=""; $("#importDlg").showModal(); });
+$("#importGo").addEventListener("click",async()=>{
+  const files=[...$("#importFiles").files]; const log=m=>{ $("#importLog").textContent+=m+"\n"; };
+  const jsons=files.filter(f=>f.name.endsWith(".json")); if(!jsons.length){ log("Chọn ít nhất 1 file .json"); return; }
+  const imgs=Object.fromEntries(files.filter(f=>!f.name.endsWith(".json")).map(f=>[f.name,f]));
+  $("#importGo").disabled=true;
+  try{
+    for(const jf of jsons){
+      let data; try{ data=JSON.parse(await jf.text()); }catch{ log(jf.name+": JSON không hợp lệ"); continue; }
+      const project=data.project||"—", prefix=(state.registry[project]?.prefix)||(data.bugPrefix||"BUG").replace(/[^A-Za-z0-9]/g,"")||"BUG";
+      if(!state.registry[project] && (data.bugs||[]).length){ try{ await registerProject(project,prefix); log(`Đã thêm dự án ${project} (prefix ${prefix})`); }catch(e){ log("Dừng: "+e.message+" — đổi bugPrefix trong qa-config.json của dự án này"); continue; } }
+      const next=nextCodeFn(prefix);
+      const existing=new Set(state.bugs.map(b=>b._id)); let created=0, skipped=0, updated=0;
+      for(const raw of (data.bugs||[])){
+        const id=String(raw.key||"").replace(/[^A-Za-z0-9_-]/g,"") || Math.random().toString(36).slice(2,12);
+        if(existing.has(id)){ skipped++; continue; }
+        const shotIds=[];
+        for(const name of (raw.screenshots||[])){
+          const f=imgs[name.split("/").pop()]; if(!f) continue;
+          try{ const r=await assets.upload(f,{type:f.type||"image/png"}); shotIds.push(r.id); }catch(e){ log("Ảnh "+name+": "+(e.code||"lỗi")); }
+        }
+        const doc={...raw,key:id,project,code:next(),status:raw.status||"open",screenshots:shotIds,commentCount:0,createdAt:nowIso(),updatedAt:nowIso(),run:raw.run||data.run||null};
+        delete doc._id;
+        await db.doc("bugs/"+id).set(JSON.parse(JSON.stringify(doc)));
+        existing.add(id); state.bugs.push({...doc,_id:id}); created++;
+      }
+      for(const u of (data.updates||[])){
+        const b=state.bugs.find(x=>x._id===u.key); if(!b){ log("Không thấy bug key "+u.key); continue; }
+        await db.doc("bugs/"+b._id).update({status:u.status,updatedAt:nowIso(),commentCount:(b.commentCount||0)+1});
+        await db.collection(`bugs/${b._id}/comments`).add({kind:"status",from:b.status||"open",to:u.status,text:u.comment||"",by:state.me,at:nowIso()});
+        b.commentCount=(b.commentCount||0)+1; b.status=u.status; updated++;
+      }
+      log(`${jf.name}: tạo ${created}, bỏ qua ${skipped} (đã có), cập nhật ${updated}`);
+    }
+    toast("Import xong");
+  }catch(e){ log("Lỗi: "+(e.code||e.message)+(e.code==="quota_exceeded"?" — dung lượng đã đầy, hãy xoá bớt bug cũ.":"")); }
+  finally{ $("#importGo").disabled=false; }
+});
+
+/* ---------- manual new bug ---------- */
+$("#newBtn").addEventListener("click",()=>{ $("#newForm").reset(); $("#nShots").closest(".field").hidden=!assets;
+  const ps=projects().filter(p=>p!=="—");
+  $("#nProject").replaceChildren(...ps.map(p=>h("option",{value:p,selected:p===state.project},`${p} · ${prefixOf(p)}`)), h("option",{value:"__new",selected:!ps.length},"+ Dự án mới…"));
+  $("#nNewWrap").hidden=$("#nProject").value!=="__new";
+  $("#newDlg").showModal(); });
+$("#nProject").addEventListener("change",()=>{ $("#nNewWrap").hidden=$("#nProject").value!=="__new"; });
+$("#newCancel").addEventListener("click",()=>$("#newDlg").close());
+$("#newForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  let project=$("#nProject").value, prefix;
+  if(project==="__new"){
+    project=$("#nNewName").value.trim(); prefix=$("#nNewPrefix").value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+    if(!project||!prefix){ toast("Nhập tên dự án và prefix (vd LC)."); return; }
+    try{ await registerProject(project,prefix); }catch(err){ toast(err.message||"Không thêm được dự án."); return; }
+  } else prefix=prefixOf(project);
+  const id=Math.random().toString(36).slice(2,12); const shotIds=[];
+  if(assets) for(const f of $("#nShots").files){ try{ shotIds.push((await assets.upload(f,{type:f.type||"image/png"})).id); }catch{} }
+  const doc={key:id,project,code:nextCodeFn(prefix)(),title:$("#nTitle").value.trim(),path:$("#nPath").value.trim(),page:$("#nPath").value.trim(),
+    group:$("#nGroup").value,severity:$("#nSev").value,type:$("#nType").value,expected:$("#nExp").value,actual:$("#nAct").value,steps:$("#nSteps").value,
+    viewports:(+$("#nVp").value?[+$("#nVp").value]:[]),browsers:[$("#nBrowser").value],screenshots:shotIds,status:"open",commentCount:0,createdAt:nowIso(),updatedAt:nowIso(),createdBy:state.me};
+  doc.source=$("#nSource").value; if($("#nEnv").value.trim()) doc.env=$("#nEnv").value.trim();
+  try{ await db.doc("bugs/"+id).set(doc); $("#newDlg").close(); toast("Đã tạo "+doc.code); }
+  catch(err){ toast(err.code==="invalid_argument"?"Bạn không có quyền tạo bug.":"Tạo bug không được, thử lại."); }
+});
+
+/* ---------- export ---------- */
+async function save(filename, text, type){
+  try{ await downloads.save({filename,data:new Blob([text],{type})}); }catch(e){ if(e&&e.code!=="declined"&&e.code!=="cancelled") toast("Không tải xuống được."); }
+}
+$("#exportJson").addEventListener("click",()=>{
+  const list=state.bugs.filter(inProject).map(({_id,...b})=>b);
+  save(`tracker-export-${state.project||"all"}.json`, JSON.stringify({project:state.project,exportedAt:nowIso(),bugs:list},null,2),"application/json");
+});
+$("#exportCsv").addEventListener("click",()=>{
+  const cols=["code","status","severity","group","path","title","viewports","browsers","element","expected","actual","type","updatedAt"];
+  const esc=v=>{ v=Array.isArray(v)?v.join(" "):(v??""); v=String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const rows=[cols.join(","),...filtered().map(b=>cols.map(c=>esc(b[c])).join(","))];
+  save(`bugs-${state.project||"all"}.csv`,"﻿"+rows.join("\n"),"text/csv");
+});
+</script>
+
+</body></html>

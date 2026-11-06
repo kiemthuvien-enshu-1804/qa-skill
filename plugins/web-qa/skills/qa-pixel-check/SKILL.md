@@ -14,7 +14,8 @@ for vp in sp pc; do
   node $S/visual_diff.mjs --page <page> --vp $vp --figma-png specs/<page>.$vp.png --out $RUN
 done
 ```
-- `msedge` lỗi launch → Edge chưa cài: báo người dùng, tiếp tục với 2 browser còn lại.
+- `msedge` dùng Microsoft Edge đã cài trên máy (Playwright không cài Edge). Lỗi launch → Edge chưa cài: báo người dùng, tiếp tục với 2 browser còn lại; bug chỉ của Edge lần này không verify được.
+- Ngưỡng (`qa-config.json → tolerance`): `px` cho vị trí/kích thước, `fontPx` cho font-size/line-height/letter-spacing, `colorDelta` = chênh lệch lớn nhất của 1 kênh R/G/B (0–255).
 - Thông số đo: x, y, width, height, font-size/weight, line-height, letter-spacing, font-family, color, background, border, radius, padding, gap, opacity, text-align, nội dung text.
 
 ## Đọc kết quả

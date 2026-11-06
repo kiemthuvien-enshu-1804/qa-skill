@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Thư mục QA của 1 dự án. Skill + script nằm ở plugin web-qa@enshu-qa; file này chỉ giữ thư viện mà script cần.",
   "scripts": {
-    "setup": "npx playwright install chromium webkit && npx playwright install msedge || echo 'msedge: cài Microsoft Edge trên máy để dùng channel msedge'"
+    "setup": "npx playwright install chromium webkit"
   },
   "dependencies": {
     "playwright": "^1.48.0",

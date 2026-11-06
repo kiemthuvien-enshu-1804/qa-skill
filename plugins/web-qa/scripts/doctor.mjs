@@ -3,6 +3,7 @@
 // Không in giá trị bí mật. Usage: node <plugin>/scripts/doctor.mjs [--offline] [--config qa-config.json]
 // Exit code 1 nếu có FAIL.
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { parseArgs, readJson } from './lib.mjs';
 
 const args = parseArgs();
@@ -151,6 +152,25 @@ if (cfg.checklist?.file) {
 } else warn('Chưa khai báo checklist.file');
 if (!cfg.tracker?.url) warn('Chưa có tracker.url — qa-bug-report sẽ tạo Tracker mới cho dự án');
 if (!fs.existsSync('node_modules/playwright')) fail('Chưa cài thư viện — chạy: npm install && npm run setup');
+
+// Python 3 + openpyxl (figma_api, make_bugs, compare_runs, update_checklist). Windows: "python3" thường là lối tắt Microsoft Store, không chạy.
+{
+  const py = ['python3', 'python', 'py'].find((c) => spawnSync(c, ['-c', 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)'], { stdio: 'ignore' }).status === 0);
+  if (!py) fail('Không tìm thấy Python 3.8+ — cài Python 3 (Windows: python.org, tick "Add python.exe to PATH")');
+  else if (spawnSync(py, ['-c', 'import openpyxl'], { stdio: 'ignore' }).status !== 0) fail(`Python (${py}) thiếu openpyxl — chạy: ${py} -m pip install openpyxl`);
+  else ok(`Python: ${py} + openpyxl`);
+}
+
+// Microsoft Edge (browser "msedge" dùng Edge cài trên máy; npm run setup chỉ cài Chromium + WebKit)
+if ((cfg.browsers || []).includes('msedge')) {
+  const edge = {
+    win32: ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe'],
+    darwin: ['/Applications/Microsoft Edge.app'],
+    linux: ['/opt/microsoft/msedge/msedge', '/usr/bin/microsoft-edge'],
+  }[process.platform] || [];
+  if (edge.some((p) => fs.existsSync(p))) ok('Microsoft Edge đã cài (browser msedge)');
+  else warn('Không thấy Microsoft Edge — cài Edge, hoặc bỏ "msedge" khỏi qa-config.json → browsers');
+}
 
 report();
 

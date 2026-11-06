@@ -10,6 +10,8 @@
 sẽ được tìm theo `text`.
 """
 import argparse, json, os, re, sys, urllib.request, urllib.parse
+for _s in (sys.stdout, sys.stderr):  # console Windows (cp1252/cp932) không in được tiếng Việt
+    _s.reconfigure(encoding="utf-8", errors="replace")
 
 API = "https://api.figma.com/v1"
 

@@ -5,7 +5,7 @@ description: Kiểm dữ liệu CMS qua API (microCMS, WordPress REST, Laravel A
 
 # Kiểm dữ liệu CMS ↔ trang
 
-Trước bước này nên chạy `qa-cms-seed` để trang có bộ dữ liệu test đã biết trước (ca biên, bài nháp). Bug liên quan bài seed: ghi nhãn `[<PREFIX>0xx]` + purpose (xem `cms-seed/<tên>.applied.json`).
+Trước bước này nên chạy `qa-cms-seed` để trang có bộ dữ liệu test đã biết trước (ca biên, bài nháp). Bug liên quan bài seed: ghi nhãn `[<PREFIX>0xx]` + purpose (xem `cms-seed/<page>.applied.json`).
 
 ## 1. Cấu hình (1 lần mỗi dự án)
 `qa-config.json → cms`: kết nối (baseUrl, headers dùng `${BIẾN_MÔI_TRƯỜNG}`, kiểu phân trang, `listPath`, `totalPath`). Mẫu microCMS / WordPress / Laravel API có trong `qa-config.example.json → cms._examples`.
@@ -39,4 +39,5 @@ Dữ liệu giống nhau SP/PC nên chạy 1 viewport là đủ; chạy thêm `-
 | `cms-detail` | Chi tiết 404 / sai tiêu đề / trống nội dung | slug khác id, bài cũ chưa build |
 - Site build tĩnh (Nuxt generate): lệch dữ liệu có thể do chưa rebuild — ghi rõ trong bug "kiểm thời điểm build" thay vì kết luận code sai.
 - Xem ảnh `$RUN/cms/*.png` cho finding nghi ngờ trước khi báo bug.
-- Dữ liệu nháp/lên lịch, preview CMS admin → không làm ở đây, mục checklist tương ứng để trống cho tester kiểm bằng Claude in Chrome.
+- Dữ liệu nháp/lên lịch, preview CMS admin, cache → không làm ở đây, mục checklist tương ứng để trống cho tester kiểm bằng Claude in Chrome.
+- Dữ liệu > 100 bài (checklist Pagination): script tự phân trang API theo `cms.pagination.pageSize`; tăng `pages[].cms.maxPages` để đi hết các trang của site.

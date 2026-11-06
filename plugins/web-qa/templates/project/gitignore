@@ -3,18 +3,10 @@
 .env.local
 .env.*.local
 
+# Sinh lại được / quá nặng
 node_modules/
 runs/
 
-# Dữ liệu riêng của dự án. Kit dùng chung không chứa các file này.
-# Nếu repo QA của 1 dự án muốn lưu config/spec/checklist vào git → xoá các dòng dưới trong bản copy của dự án.
-qa-config.json
-specs/*
-!specs/README.md
-checklist/*
-!checklist/README.md
-!checklist/*Template*.xlsx
-flows/*
-!flows/.gitkeep
-cms-seed/*
-!cms-seed/README.md
+# Còn lại (qa-config.json, specs/, flows/, checklist/, cms-seed/) là dữ liệu QA của dự án → NÊN commit
+# để cả team dùng chung cấu hình và regression chạy lại đúng spec/flow/seed cũ.
+# Chỉ commit vào repo private: checklist / Figma PNG có thể là tài liệu của khách hàng.

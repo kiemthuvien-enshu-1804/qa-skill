@@ -26,7 +26,8 @@
     "height": 900
   },
   "browsers": ["chromium", "msedge", "webkit"],
-  "tolerance": { "px": 1, "fontPx": 0, "colorDelta": 2 },
+  "tolerance": { "px": 1, "fontPx": 0, "colorDelta": 2,
+    "_note": "px: lệch vị trí/kích thước/padding/gap cho phép (px). fontPx: lệch font-size/line-height/letter-spacing (px). colorDelta: chênh lệch lớn nhất của 1 kênh R/G/B (thang 0–255), vd #333333 vs #353333 = 2" },
 
   "cms": {
     "name": "microCMS",
