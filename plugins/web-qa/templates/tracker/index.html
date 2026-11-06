@@ -103,6 +103,19 @@ main{padding-block:4px 48px}
 .shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
 .shots a{display:block;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--sunk)}
 .shots img{display:block;width:100%;height:auto}
+.shots button{display:block;padding:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--sunk);cursor:zoom-in}
+.shots button:hover{border-color:var(--accent)}
+.lb{position:fixed;inset:0;z-index:70;background:rgba(8,12,16,.9);display:flex;flex-direction:column;
+  padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.lb-bar{display:flex;align-items:center;gap:8px;color:#fff;padding-bottom:10px}
+.lb-bar .cnt{font-family:var(--mono);font-size:13px;margin-right:auto}
+.lb-bar button,.lb-nav{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#fff;border-radius:var(--r);padding:6px 12px}
+.lb-bar button:hover,.lb-nav:hover{background:rgba(255,255,255,.2)}
+.lb-stage{flex:1;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:center}
+.lb-stage img{max-width:100%;height:auto;margin:auto;cursor:zoom-in;background:#fff}
+.lb-stage.zoom img{max-width:none;cursor:zoom-out}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);font-size:20px;line-height:1;padding:10px 14px}
+.lb-nav.prev{left:max(12px,env(safe-area-inset-left,0px))}.lb-nav.next{right:max(12px,env(safe-area-inset-right,0px))}
 .status-row{display:flex;flex-wrap:wrap;gap:6px}
 .status-row button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:12.5px}
 .status-row button[aria-pressed="true"]{border-color:var(--c);color:var(--c);box-shadow:inset 0 0 0 1px var(--c);font-weight:600}
@@ -276,7 +289,7 @@ function notice(msg){ const n=$("#notice"); n.textContent=msg||""; n.hidden=!msg
 
 /* ---------- list ---------- */
 function projects(){ return [...new Set([...Object.keys(state.registry), ...state.bugs.map(b=>b.project||"—")])].sort(); }
-function prefixOf(p){ const r=state.registry[p]; if(r&&r.prefix) return r.prefix; const b=state.bugs.find(x=>(x.project||"—")===p&&x.code); return b? String(b.code).split("-")[0] : "BUG"; }
+function prefixOf(p){ const r=state.registry[p]; if(r&&r.prefix) return r.prefix; const b=state.bugs.find(x=>(x.project||"—")===p&&x.code); return b? String(b.code).split(/[-_]/)[0] : "BUG"; }
 function projSlug(p){ return (String(p).replace(/[^A-Za-z0-9_-]/g,"-").replace(/-+/g,"-").slice(0,60))||("p"+Date.now()); }
 function setProject(p){ state.project=p; try{ localStorage.setItem("qa.project",p); }catch{} renderAll(); }
 async function registerProject(name,prefix){
@@ -354,7 +367,7 @@ window.addEventListener("hashchange",()=>{ if(!location.hash) closeBug(true); el
 function openBug(id,fromHash){
   const b=state.bugs.find(x=>x._id===id); if(!b) return;
   state.open=id;
-  if(!fromHash && b.code && /^[A-Za-z0-9-]+$/.test(b.code)) history.replaceState(null,"","#"+b.code);
+  if(!fromHash && b.code && /^[A-Za-z0-9_-]+$/.test(b.code)) history.replaceState(null,"","#"+b.code);
   $("#scrim").hidden=false; $("#sheet").hidden=false;
   comments=[]; renderSheet(b);
   if(unsubComments) unsubComments();
@@ -366,7 +379,34 @@ function closeBug(fromHash){
   if(!fromHash && location.hash) history.replaceState(null,"",location.pathname+location.search);
 }
 $("#scrim").addEventListener("click",()=>closeBug());
-document.addEventListener("keydown",e=>{ if(e.key==="Escape" && state.open) closeBug(); });
+/* ---------- lightbox ---------- */
+let lb=null;
+function openLightbox(ids,idx,code){
+  closeLightbox();
+  let i=idx; const prevFocus=document.activeElement;
+  const img=h("img",{alt:""}); const cnt=h("span",{class:"cnt"});
+  const stage=h("div",{class:"lb-stage"},img);
+  const show=()=>{ img.src="/_blob/"+ids[i]; img.alt=`Ảnh ${i+1}/${ids.length} của ${code||"bug"}`; cnt.textContent=`${code||""} · ${i+1}/${ids.length}`; stage.classList.remove("zoom"); stage.scrollTo(0,0); };
+  const go=d=>{ i=(i+d+ids.length)%ids.length; show(); };
+  const multi=ids.length>1;
+  const closeBtn=h("button",{type:"button",onclick:()=>closeLightbox()},"✕ Đóng");
+  const el=h("div",{class:"lb",role:"dialog","aria-modal":"true","aria-label":"Xem ảnh lớn",onclick:e=>{ if(e.target===el||e.target===stage) closeLightbox(); }},
+    h("div",{class:"lb-bar"},cnt,
+      h("button",{type:"button",onclick:()=>stage.classList.toggle("zoom")},"Phóng to / thu nhỏ"),
+      h("a",{href:"/_blob/"+ids[i],target:"_blank",rel:"noopener",style:"color:#fff;font-size:13px",onclick:e=>{ e.currentTarget.href="/_blob/"+ids[i]; }},"Mở ảnh gốc"),
+      closeBtn),
+    stage,
+    multi?h("button",{type:"button",class:"lb-nav prev","aria-label":"Ảnh trước",onclick:()=>go(-1)},"‹"):null,
+    multi?h("button",{type:"button",class:"lb-nav next","aria-label":"Ảnh sau",onclick:()=>go(1)},"›"):null);
+  img.addEventListener("click",e=>{ e.stopPropagation(); stage.classList.toggle("zoom"); });
+  lb={el,go,multi,prevFocus};
+  document.body.append(el); show(); closeBtn.focus();
+}
+function closeLightbox(){ if(!lb) return; const f=lb.prevFocus; lb.el.remove(); lb=null; if(f&&f.focus) f.focus(); }
+document.addEventListener("keydown",e=>{
+  if(lb){ if(e.key==="Escape"){ e.stopPropagation(); closeLightbox(); } else if(lb.multi&&e.key==="ArrowLeft") lb.go(-1); else if(lb.multi&&e.key==="ArrowRight") lb.go(1); return; }
+  if(e.key==="Escape" && state.open) closeBug();
+});
 
 function renderSheet(b){
   const sheet=$("#sheet");
@@ -394,7 +434,7 @@ function renderSheet(b){
         h("div",{},h("h4",{},"Figma / mong đợi"),h("pre",{},b.expected||"—")),
         h("div",{class:"act"},h("h4",{},"Thực tế"),h("pre",{},b.actual||"—"))):null,
       b.steps? h("div",{},h("p",{class:"sec-title"},"Cách tái hiện"),h("div",{style:"white-space:pre-wrap"},b.steps)):null,
-      shots.length? h("div",{},h("p",{class:"sec-title"},"Ảnh"),h("div",{class:"shots"},...shots.map(id=>h("a",{href:"/_blob/"+id,target:"_blank",rel:"noopener"},h("img",{src:"/_blob/"+id,alt:"Ảnh bug "+(b.code||""),loading:"lazy",onerror:"this.alt='Ảnh không tải được'"}))))):null,
+      shots.length? h("div",{},h("p",{class:"sec-title"},"Ảnh"),h("div",{class:"shots"},...shots.map((id,i)=>h("button",{type:"button",title:"Bấm để xem ảnh lớn","aria-label":`Xem ảnh ${i+1} của ${b.code||"bug"} cỡ lớn`,onclick:()=>openLightbox(shots,i,b.code)},h("img",{src:"/_blob/"+id,alt:"Ảnh bug "+(b.code||""),loading:"lazy",onerror:function(){ this.alt='Ảnh không tải được'; }}))))):null,
       h("div",{},h("p",{class:"sec-title"},"Trao đổi"),h("div",{class:"thread",id:"thread"})),
       state.canWrite? h("div",{class:"compose"},
         h("textarea",{id:"cmtText",placeholder:"Comment cho QA / dev… (dev: ghi rõ đã sửa gì, commit/branch nếu có)"}),
@@ -454,9 +494,10 @@ $("#linkCancel").addEventListener("click",()=>$("#linkDlg").close());
 
 /* ---------- codes ---------- */
 function nextCodeFn(prefix){
-  let n=0; const re=new RegExp("^"+prefix.replace(/[^A-Za-z0-9]/g,"")+"-(\\d+)$");
-  state.bugs.forEach(b=>{ const m=re.exec(b.code||""); if(m) n=Math.max(n,+m[1]); });
-  return ()=> `${prefix}-${String(++n).padStart(3,"0")}`;
+  // Accept ABC-001 and ABC_001; keep the separator the project already uses (default "-").
+  let n=0, sep="-"; const re=new RegExp("^"+prefix.replace(/[^A-Za-z0-9]/g,"")+"([-_])(\\d+)$");
+  state.bugs.forEach(b=>{ const m=re.exec(b.code||""); if(m){ if(+m[2]>=n) sep=m[1]; n=Math.max(n,+m[2]); } });
+  return ()=> `${prefix}${sep}${String(++n).padStart(3,"0")}`;
 }
 
 /* ---------- import ---------- */

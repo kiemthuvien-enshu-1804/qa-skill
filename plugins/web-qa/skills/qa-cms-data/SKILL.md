@@ -5,6 +5,11 @@ description: Kiểm dữ liệu CMS qua API (microCMS, WordPress REST, Laravel A
 
 # Kiểm dữ liệu CMS ↔ trang
 
+**Chuẩn nội dung là dữ liệu đã nhập trên CMS, không phải Figma.** Text/ảnh trên Figma chỉ là dữ liệu demo để tham khảo; Figma chỉ là chuẩn layout/style.
+- Bug nội dung chỉ hợp lệ khi **web ≠ CMS**: thiếu field, ảnh/file không lấy từ CMS (ảnh tĩnh, file cố định của bản ghi khác), text bị cắt, sai thứ tự, sai format ngày.
+- Không báo bug khi dữ liệu CMS khác Figma (link, nhãn bảng, số liệu, tên mục footer…), kể cả khi trông như nhập nhầm.
+- Dữ liệu CMS trông nhập sai (vd link Instagram trỏ trang cơ sở khác, nhãn bảng lệch): chỉ ghi chú cho người dùng (`dataNotes` trong `cms.<page>.json` / báo cáo), **không tạo bug trên Tracker**.
+
 Trước bước này nên chạy `qa-cms-seed` để trang có bộ dữ liệu test đã biết trước (ca biên, bài nháp). Bug liên quan bài seed: ghi nhãn `[<PREFIX>0xx]` + purpose (xem `cms-seed/<page>.applied.json`).
 
 ## 1. Cấu hình (1 lần mỗi dự án)
@@ -26,6 +31,17 @@ Chưa rõ field/selector: gọi API 1 lần với `--dump` (ghi `$RUN/cms/<page>
 node "${CLAUDE_PLUGIN_ROOT}/scripts/cms_check.mjs" --page <page> --out $RUN [--vp pc] [--dump]
 ```
 Dữ liệu giống nhau SP/PC nên chạy 1 viewport là đủ; chạy thêm `--vp sp` khi SP hiển thị số bài khác.
+
+### Trang dựng từ 1 bản ghi (chi tiết cơ sở, hồ sơ nhân viên, trang dịch vụ…)
+`cms_check.mjs` chỉ dành cho trang list. Trang chi tiết lấy 1 bản ghi thì dùng:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/cms_record_check.mjs" --page <page> [--id <recordId>] --out $RUN
+```
+- Lấy `GET <endpoint>/<id>` (id mặc định = đoạn cuối của `pages[].path`), tách mọi text (rich text tách theo đoạn), ảnh, file, link của bản ghi, rồi kiểm từng giá trị có trên trang ở mọi viewport (`visible` / `in-dom-hidden` = nằm trong accordion/tab / `present` / `missing`).
+- Link trên trang trỏ tới file CMS **không thuộc bản ghi này** → finding `cms-link` (thường là file cố định của 1 cơ sở dùng chung cho mọi cơ sở).
+- Field hiển thị ở trang con, không ở trang này → `pages[].cms.record.skipPaths` (regex theo đường dẫn field, vd `"detailed_service"`); chỉ lấy vài field → `record.fields`; bỏ field nội bộ → `record.skipFields`.
+- Kết quả: `$RUN/cms.<page>.json` (`mode: "record"`, có `rows` từng giá trị), `$RUN/cms/<page>.record.json` (body API, không có key). Xem `missing` trước khi báo bug: field có thể nằm ở trang con hoặc trong slider/modal chỉ tải khi mở.
+- Nên kiểm thêm 1–2 bản ghi khác (`--id`) để bắt dữ liệu cố định theo 1 bản ghi (ảnh/file/link giống nhau ở mọi cơ sở). Bản ghi test trả 404 trên site thì ghi chú, không phải bug.
 
 ## 3. Đọc kết quả `$RUN/cms.<page>.json`
 | prop | Ý nghĩa | Nguyên nhân hay gặp |

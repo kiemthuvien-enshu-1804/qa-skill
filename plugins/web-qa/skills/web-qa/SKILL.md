@@ -33,7 +33,7 @@ Python: các skill gọi `$PY`, đặt bằng `PY=$(python3 -c 1 2>/dev/null && 
 ## Phần VS Code (người chạy Claude Code)
 1. `qa-figma-spec` — spec SP/PC + PNG + Figma comments (gồm comment về luồng hiển thị dữ liệu)
 2. *(trang/khối có dữ liệu CMS)* `qa-cms-seed` — tạo bộ dữ liệu test có nhãn `[<PREFIX>001]` trên CMS dev theo ca biên + Figma comment (xem trước → người dùng đồng ý → `--apply`; SSG thì rebuild)
-3. `qa-cms-data` — dữ liệu CMS (API key) ↔ list/detail/pagination/filter
+3. `qa-cms-data` — dữ liệu CMS (API key) ↔ list/detail/pagination/filter; trang dựng từ 1 bản ghi → `cms_record_check.mjs`
 4. `qa-logic-flow` — check chung mọi trang (`page_checks.mjs`: title/OGP/favicon, GTM, số điện thoại, ảnh Retina/nặng, link, breadcrumb, 404) + flow riêng theo Figma comment và checklist (menu, slider, filter/search, tab, pagination, accordion, modal, map, validation không gửi form thật, print)
 5. `qa-pixel-check` — từng px, diff ảnh, Chrome/Edge/WebKit (trang CMS: so Figma bằng bài `noPrefix` text giống Figma)
 6. `qa-responsive` — 360→1920 × 3 browser (dữ liệu seed dài/ngắn giúp bắt tràn, cắt chữ)
@@ -73,7 +73,8 @@ Vui lòng test đúng build này; nếu site deploy lại, báo mình chạy l�
 ```
 
 ## Quy tắc chung
-- Spec Figma là chuẩn layout; dữ liệu CMS là chuẩn nội dung động.
+- Spec Figma là chuẩn layout; dữ liệu CMS là chuẩn nội dung động. Trang lấy dữ liệu CMS: chỉ kiểm web hiển thị đúng dữ liệu đã nhập trên CMS, **không so dữ liệu CMS với Figma** (text/ảnh Figma là demo). Dữ liệu CMS nhập sai nhưng web hiện đúng → ghi chú cho người dùng, không tạo bug.
+- Bug layout/pixel ghi **nguyên nhân gốc** (element/CSS gây lệch, so với cấu trúc Figma) + đề xuất sửa, không chỉ "Figma X / thực tế Y" (`qa-pixel-check` mục 4, `qa-bug-report` bước 2).
 - Lỗi cả SP và PC → `common`; lỗi dữ liệu CMS → `common`.
 - Bug viết **tiếng Việt** (Tracker là link nội bộ của team), mức độ theo bảng Severity và chỉ ghi môi trường khi lỗi riêng 1 môi trường (`qa-bug-report` 1b, 1c).
 - `tracker.url` trống → `qa-bug-report` tạo Tracker mới từ mẫu của plugin, rồi người dùng bật Share "Anyone with the link" để dev comment, đổi trạng thái.

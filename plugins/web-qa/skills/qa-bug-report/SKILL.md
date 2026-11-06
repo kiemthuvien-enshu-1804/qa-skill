@@ -46,7 +46,13 @@ $PY "${CLAUDE_PLUGIN_ROOT}/scripts/make_bugs.py" --run $RUN
 ```
 → `bugs.json`, `upload/*.png`, `summary.md`. Đọc `summary.md` rồi sửa trực tiếp `bugs.json`:
 - gộp bug cùng nguyên nhân (vd. CMS ngày lệch ở list và ở chi tiết = 1 bug JST), bỏ lệch `y` kéo theo section phía trên
-- bỏ finding không hợp lệ (CMS chưa rebuild đã xác nhận, nội dung CMS khác dữ liệu mẫu Figma)
+- bỏ finding không hợp lệ (CMS chưa rebuild đã xác nhận, nội dung CMS khác dữ liệu mẫu Figma, dữ liệu CMS nhập sai nhưng web hiển thị đúng CMS → chỉ ghi chú cho người dùng)
+- **bug layout/pixel phải ghi nguyên nhân gốc** (cách tìm: `qa-pixel-check` mục 4):
+  - `title`: element gốc + hiện tượng, vd `PC footer: cột 施設一覧 co theo nội dung (529px thay vì 572px) nên cột phải lệch trái 43px`
+  - `element`: element gốc (selector/class), không phải element bị kéo theo
+  - `actual`: số đo + **vì sao** ra số đo đó (CSS/cấu trúc nào), so với cấu trúc Figma (width cố định, gap, auto-layout), các element bị kéo theo
+  - `steps`: cách tái hiện + **đề xuất sửa** (CSS cụ thể) + số đo sau khi thử bản sửa (nếu đã thử)
+  - `figma.nodeId`: node/instance của khối chứa element gốc
 - rà lại `severity` theo bảng 1b
 - viết lại `title` ngắn, dev đọc là hiểu
 
@@ -55,6 +61,7 @@ $PY "${CLAUDE_PLUGIN_ROOT}/scripts/make_bugs.py" --run $RUN
 ## 2b. Ảnh bug (không gửi ảnh gốc)
 Ảnh bug website **chỉ gồm**: khung đỏ quanh từng chỗ sai + ghi **mong muốn** ngay cạnh khung (vd `font-size: 16px`, `Hiển thị 「お知らせ一覧」`).
 Không thêm tiêu đề, môi trường, "hiện tại", nguồn… (bug trên Tracker đã có các thông tin đó). Chỉ khoanh chỗ chắc chắn là bug.
+Bug layout: khoanh **element gốc** (ghi CSS mong muốn, vd `flex: 0 0 572px`) và element bị kéo theo (ghi giá trị Figma), không chỉ khoanh element có số đo lệch.
 
 Ai vẽ:
 - **Pixel (`measure.mjs`)**: tự vẽ `shots/*.png` (khung đỏ + giá trị Figma mong muốn; ảnh sạch là `*.raw.png`). Phần tử không hiển thị thì giữ ảnh, không khoanh bừa.
@@ -83,6 +90,7 @@ Tracker là một trang claude.ai (Artifact) dùng chung cho team: xem bug, đ�
 ### 3b. Đưa bug lên
 - Thường dùng: mở Tracker → Import → chọn `bugs.json` cùng toàn bộ ảnh trong `upload/`. Tracker tự gán mã `<bugPrefix>-001…`, bỏ qua bug trùng `key`.
 - Session có tool Artifact/ArtifactData: ghi trực tiếp `bugs/{key}` (schema dưới), ảnh upload bằng Artifact `asset: true`.
+- Bỏ bug đã đưa lên: bug chưa có comment/đổi trạng thái thì xoá được; bug đã có trao đổi (dev comment, đổi status) thì **không xoá** — chuyển `status: closed` kèm comment lý do (vd "Web hiển thị đúng dữ liệu CMS, không phải bug web").
 
 Schema `bugs/{key}`: `key, code, project, page, path, url, title, group, type, severity (high|medium|low), viewports[], browsers[], env, element, prop, expected, actual, steps, figma{fileKey,nodeId,url}, screenshots[assetId], source (auto|chrome|manual), check, run, status (open|in-progress|fixed|wontfix|reopened|verified|closed), commentCount, createdAt, updatedAt`
 Comment: `bugs/{key}/comments/{id}`: `text, by, byName, at, kind (comment|status), from, to`.

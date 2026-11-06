@@ -71,7 +71,7 @@ qa-<dự-án>/
 ## Biến môi trường (`.env.local`)
 | Biến | Dùng cho |
 |---|---|
-| `CMS_API_KEY` (hoặc tên bạn đặt trong `cms.headers`) | `cms_check.mjs`, `doctor` |
+| `CMS_API_KEY` (hoặc tên bạn đặt trong `cms.headers`) | `cms_check.mjs`, `cms_record_check.mjs`, `doctor` |
 | `FIGMA_TOKEN` | `figma_api.py` (không có thì dùng Figma MCP) |
 | `QA_BASIC_USER`, `QA_BASIC_PASS` | site test có Basic Auth |
 | `CMS_WRITE_API_KEY` | `cms_seed.mjs` — key có quyền ghi, chỉ service dev |
@@ -81,7 +81,7 @@ qa-<dự-án>/
 Scripts tự đọc `.env.local`; `.gitignore` loại nó khỏi git; `.claude/settings.json` chặn Claude đọc nó.
 
 ## Scripts (trong plugin, `${CLAUDE_PLUGIN_ROOT}/scripts/`; Claude gọi qua skill)
-`init`, `doctor`, `figma_api.py`, `measure`, `visual_diff`, `responsive_sweep`, `cms_seed`, `cms_check`, `page_checks`, `flow_template`, `make_bugs.py`, `compare_runs.py`, `update_checklist.py`. Chi tiết xem README của repo plugin.
+`init`, `doctor`, `figma_api.py`, `measure`, `visual_diff`, `responsive_sweep`, `cms_seed`, `cms_check`, `cms_record_check`, `page_checks`, `flow_template`, `make_bugs.py`, `compare_runs.py`, `update_checklist.py`. Chi tiết xem README của repo plugin.
 
 ## Giới hạn
 - WebKit ≈ Safari, không phải Safari thật → xác nhận trên Mac/iPhone, ghi vào `manual_bugs.json`.
