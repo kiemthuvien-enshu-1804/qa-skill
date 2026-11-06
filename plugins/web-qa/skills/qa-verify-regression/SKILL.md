@@ -15,7 +15,8 @@ RUN=runs/$(date +%Y%m%d-%H%M)-verify; S="${CLAUDE_PLUGIN_ROOT}/scripts"; PY=$(py
 for vp in sp pc; do for b in chromium msedge webkit; do node $S/measure.mjs --spec specs/<page>.$vp.json --browser $b --out $RUN; done
   node $S/visual_diff.mjs --page <page> --vp $vp --figma-png specs/<page>.$vp.png --out $RUN; done
 node $S/responsive_sweep.mjs --page <page> --out $RUN
-node $S/cms_check.mjs --page <page> --out $RUN                      # nếu trang có CMS
+node $S/cms_check.mjs --page <page> --out $RUN                      # nếu trang list có CMS
+node $S/cms_record_check.mjs --page <page> --out $RUN               # thay dòng trên nếu trang dựng từ 1 bản ghi
 for vp in sp pc; do node $S/page_checks.mjs --page <page> --vp $vp --out $RUN; done
 for vp in sp pc; do WEBQA_ROOT="${CLAUDE_PLUGIN_ROOT}" node flows/<page>.flow.mjs --out $RUN --vp $vp; done   # nếu có flow
 $PY $S/make_bugs.py --run $RUN
