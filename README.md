@@ -87,10 +87,64 @@ claude plugin install web-qa@enshu-qa
 ```
 
 ## Tạo thư mục QA cho dự án mới
-1. Tạo thư mục rỗng (vd `qa-<dự-án>/`), mở bằng VS Code → Claude Code.
-2. Nói với Claude: *"tạo thư mục QA cho dự án <tên>, site https://…, mã bug ABC"*. Skill `web-qa` sẽ chạy `init` để copy khung từ `plugins/web-qa/templates/project/`.
-3. `npm install && npm run setup`, điền `qa-config.json` + `.env.local`, rồi nhờ Claude chạy doctor.
-4. Commit thư mục QA (nếu dự án lưu vào git). `.claude/settings.json` đã khai marketplace + plugin, nên người khác mở thư mục và trust folder là được nhắc cài plugin.
+Mỗi dự án một thư mục QA riêng, tách khỏi source code. Máy phải cài plugin trước (mục [Cài lần đầu](#cài-lần-đầu-mỗi-máy-1-lần)).
+
+> **Không gửi API key, token, mật khẩu qua chat.** Tự điền vào `.env.local` (Claude bị chặn đọc file này).
+
+### Website (Figma + CMS) — plugin `web-qa`
+1. **Chuẩn bị thông tin:**
+   - Tên dự án, mã bug (vd `ABC` → `ABC-001`).
+   - Link site test, Basic Auth (nếu có).
+   - Link Figma: 1 link file hoặc 1 link page. Frame SP/PC của từng trang được tự tìm.
+   - CMS: loại (microCMS / WordPress / Laravel…), API base URL, các endpoint (vd `/news`, `/blog`).
+   - Danh sách trang cần test (vd top `/`, news `/news`, contact `/contact`).
+   - File checklist Excel (nếu có).
+2. **Tạo thư mục rỗng** (vd `qa-abc-website/`), mở bằng VS Code → Claude Code.
+3. **Nhờ Claude tạo khung**, ví dụ:
+   > Tạo thư mục QA **website** cho dự án ABC, site https://test.abc.jp, mã bug ABC.
+   > Figma: https://www.figma.com/design/…
+   > CMS: microCMS, API https://abc-dev.microcms.io/api/v1, endpoint /news, /blog.
+   > Các trang: top (/), news (/news), contact (/contact).
+
+   Claude chạy `init` (copy khung từ `plugins/web-qa/templates/project/`), điền `qa-config.json`, rồi `npm install && npm run setup` (cài Playwright + trình duyệt).
+4. **Tự điền `.env.local`:**
+   - `CMS_API_KEY`, `CMS_WRITE_API_KEY` (nếu cần tạo dữ liệu test trên microCMS dev).
+   - `FIGMA_TOKEN` (không có thì Claude dùng Figma MCP).
+   - `QA_BASIC_USER` / `QA_BASIC_PASS` (nếu có Basic Auth).
+   - `QA_TESTER` (tên người test), `QA_SEED_PREFIX` (viết tắt tên, vd `KIM`).
+5. **Kiểm tra:** nói *"chạy doctor"*, bổ sung theo báo lỗi đến khi sạch.
+6. **Bắt đầu test**, vd *"QA trang news"*: spec Figma → pixel → responsive → CMS → flow → bug lên Tracker → checklist. Mục còn trống thì tester kiểm nốt bằng Claude in Chrome (`qa-chrome-verify`).
+7. **Commit thư mục QA** (nếu dự án lưu git).
+
+### Webapp — plugin `app-qa`
+1. **Chuẩn bị thông tin:**
+   - Tên dự án, link môi trường test (và local nếu có).
+   - Đường dẫn repo tài liệu trên máy (vd `C:/…/abc-docs`) và thư mục testing (vd `docs/07_Testing`).
+   - Link mockup Claude Design.
+   - TestRail: Project ID. Backlog: project key, tên dev FE/BE, issue cha theo module.
+   - Tài khoản test theo role/tenant.
+   - Đường dẫn `.env` của app (nếu cần tạo dữ liệu test qua DB local).
+2. **Key cá nhân (mỗi máy 1 lần):** điền `TESTRAIL_URL`, `TESTRAIL_USER`, `TESTRAIL_KEY`, `BACKLOG_URL`, `BACKLOG_API_KEY` vào `~/.app-qa/.env`. Chưa có file thì `init` lần đầu sẽ tạo file mẫu.
+3. **Tạo thư mục rỗng** (vd `qa-abc-webapp/`), mở bằng VS Code → Claude Code.
+4. **Nhờ Claude tạo khung**, ví dụ:
+   > Tạo thư mục QA **webapp** cho dự án ABC, môi trường test https://app-test.abc.jp.
+   > Docs: C:/…/abc-docs, testing ở docs/07_Testing.
+   > Mockup: https://claude.ai/design/p/…
+   > TestRail project ID 12, Backlog project key ABC, dev FE: …, BE: …
+
+   Claude chạy `init`, điền `qa-config.json` (`testrail`, `backlog`, `apps.login`, `accounts`), rồi `npm install && npm run setup`.
+5. **Tự điền `.env.local`:** mật khẩu tài khoản test, vd `QA_ADMIN_A_USER` / `QA_ADMIN_A_PASS` (tên biến khớp `accounts` trong `qa-config.json`).
+6. **Kiểm tra:** nói *"chạy doctor"*, bổ sung theo báo lỗi đến khi sạch.
+7. **Bắt đầu test:** `app-testcase` (viết TC → duyệt → import TestRail, tạo Test Run) → `app-testdata` → `app-run-test` → `app-bug-backlog` (duyệt → tạo issue Backlog) → `app-verify-bug` sau khi dev fix.
+8. **Commit thư mục QA** (nếu dự án lưu git).
+
+### Kiểm tra thư mục đã có plugin chưa
+- **Trong chat:** gõ `/`, phải thấy `web-qa:…` hoặc `app-qa:…`. Không thấy → `Ctrl+Shift+P` → **Developer: Reload Window**.
+- **Máy đã cài plugin:** `claude.cmd plugin list` phải có `web-qa@enshu-qa` / `app-qa@enshu-qa`.
+- **Thư mục đã `init`:** `.claude/settings.json` có `"enabledPlugins": { "web-qa@enshu-qa": true }` (hoặc `app-qa@enshu-qa`), và có `qa-config.json`, `.env.local`, `package.json`.
+- **Toàn bộ:** nói *"chạy doctor"*.
+
+`.claude/settings.json` đã khai marketplace + plugin, nên người khác mở thư mục và trust folder là được nhắc cài plugin.
 
 ## Chuyển dự án đang dùng bản copy cũ (`.claude/skills/` trong thư mục dự án)
 1. Cài plugin như trên.
