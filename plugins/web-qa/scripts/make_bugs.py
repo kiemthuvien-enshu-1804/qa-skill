@@ -24,7 +24,8 @@ PROP_VI = {
     "fontFamily": "font-family", "textAlign": "text-align", "text": "nội dung text", "missing": "thiếu element",
     "horizontal-scroll": "xuất hiện scroll ngang", "overflow-viewport": "tràn ra ngoài màn hình",
     "text-clipped": "text bị cắt", "text-ellipsis": "text bị rút gọn (…)", "broken-image": "ảnh lỗi",
-    "tap-target": "vùng chạm quá nhỏ", "console-error": "lỗi console JS", "http-error": "request lỗi",
+    "tap-target": "vùng chạm quá nhỏ", "font-too-small": "chữ quá nhỏ", "image-distorted": "ảnh bị méo",
+    "container-width": "khung nội dung rộng quá chuẩn", "side-padding": "lề 2 bên nhỏ hơn chuẩn", "console-error": "lỗi console JS", "http-error": "request lỗi",
 }
 SEV_ORDER = {"high": 0, "medium": 1, "low": 2, "info": 3}
 
@@ -104,6 +105,7 @@ def main():
         return name
 
     bugs = []
+    held = []  # finding pixel thuộc thông số Figma chưa thống nhất → chờ tester chọn (specs/figma-conflicts.md)
     coverage = []  # đã kiểm gì: nguồn + trang + viewport + browser (+ element / check key)
     # ---- pixel/spec findings: merge SP + PC of the same element/prop → "common"
     by_elem = defaultdict(list)
@@ -114,6 +116,12 @@ def main():
         for x in d["findings"]:
             x["_url"] = d["url"]
             x["_fileKey"] = (d.get("figma") or {}).get("fileKey") or file_key
+            if x.get("figmaConflict"):
+                held.append({"page": x["page"], "viewportName": x["viewportName"], "browser": x["browser"], "element": x["element"],
+                             "prop": x["prop"], "expected": x["expected"], "actual": x["actual"], "figmaConflict": x["figmaConflict"]})
+                # chưa có chuẩn để so → không tính là đã kiểm (compare_runs giữ bug cũ ở fixed, không verified)
+                coverage[-1]["elements"] = [e for e in coverage[-1]["elements"] if e != x["element"]]
+                continue
             by_elem[x["elementKey"]].append(x)
     for ek, items in by_elem.items():
         vps = sorted({i["viewportName"] for i in items})
@@ -219,7 +227,8 @@ def main():
     add_env(bugs, coverage)
     bugs.sort(key=lambda b: (["common", "sp", "pc", "responsive"].index(b["group"]) if b["group"] in ["common", "sp", "pc", "responsive"] else 9,
                              b.get("page") or "", SEV_ORDER.get(b.get("severity"), 9)))
-    out = {"project": cfg["project"], "bugPrefix": cfg.get("bugPrefix", "BUG"), "run": os.path.basename(a.run.rstrip("/")), "bugs": bugs, "coverage": coverage}
+    out = {"project": cfg["project"], "bugPrefix": cfg.get("bugPrefix", "BUG"), "run": os.path.basename(a.run.rstrip("/")), "bugs": bugs, "coverage": coverage,
+           "held": held}
     json.dump(out, open(os.path.join(a.run, "bugs.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
     md = [f"# QA run {out['run']} — {cfg['project']}", ""]
@@ -227,6 +236,16 @@ def main():
         gb = [b for b in bugs if b["group"] == g]
         md.append(f"## {title} ({len(gb)})")
         md += [f"- [{b['severity']}·{b.get('type','')}·{b.get('source')}] {b['page']} · {b['title']}" for b in gb] or ["- (không có)"]
+        md.append("")
+    if held:
+        md.append(f"## Chờ tester chọn thông số Figma ({len(held)}) — chưa đưa lên Tracker")
+        md.append("Figma có nhiều giá trị cho các thuộc tính này (xem `specs/figma-conflicts.md`). Tester chọn → ghi `specs/figma-decisions.json` → chạy lại `figma_api.py consistency` + measure.")
+        seen_h = set()
+        for h in held:
+            k = (h["page"], h["element"], h["prop"], h["viewportName"])
+            if k not in seen_h:
+                seen_h.add(k)
+                md.append(f"- {h['page']}.{h['viewportName']} · {h['element']} · {h['prop']}: spec {h['expected']} / thực tế {h['actual']} (`{h['figmaConflict']}`)")
         md.append("")
     open(os.path.join(a.run, "summary.md"), "w", encoding="utf-8").write("\n".join(md))
     print(f"[bugs] {len(bugs)} bugs → {os.path.join(a.run, 'bugs.json')} (ảnh: {up_dir})")

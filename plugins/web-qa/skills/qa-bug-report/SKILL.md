@@ -1,6 +1,6 @@
 ---
 name: qa-bug-report
-description: Gom kết quả tự động ở VS Code (pixel, responsive, CMS, flow) và lỗi kiểm tay thành bugs.json có ảnh bug (khung đỏ từng chỗ sai + mong muốn ghi cạnh khung), nhóm Chung/SP/PC/Responsive, rồi đẩy lên Bug Tracker (link chia sẻ để dev đổi status và comment).
+description: Gom kết quả tự động ở VS Code (pixel, responsive, CMS, flow) và lỗi kiểm tay thành bugs.json có ảnh bug (khung đỏ từng chỗ sai + mong muốn ghi cạnh khung), nhóm Chung/SP/PC/Responsive, rồi đẩy lên Bug Tracker (link chia sẻ để QA/dev sửa bug, đổi status và comment).
 ---
 
 # Tạo bug & đẩy lên Bug Tracker
@@ -44,7 +44,8 @@ Script tự gán mức ban đầu (pixel theo độ lệch, responsive/CMS/page_
 PY=$(python3 -c 1 2>/dev/null && echo python3 || echo python)
 $PY "${CLAUDE_PLUGIN_ROOT}/scripts/make_bugs.py" --run $RUN
 ```
-→ `bugs.json`, `upload/*.png`, `summary.md`. Đọc `summary.md` rồi sửa trực tiếp `bugs.json`:
+→ `bugs.json`, `upload/*.png`, `summary.md`. Mục "Chờ tester chọn thông số Figma" trong `summary.md` (`held` trong `bugs.json`) **không** đưa lên Tracker: đợi tester chọn ở `specs/figma-conflicts.md`, chạy lại `consistency` + measure rồi mới tạo bug.
+Đọc `summary.md` rồi sửa trực tiếp `bugs.json`:
 - gộp bug cùng nguyên nhân (vd. CMS ngày lệch ở list và ở chi tiết = 1 bug JST), bỏ lệch `y` kéo theo section phía trên
 - bỏ finding không hợp lệ (CMS chưa rebuild đã xác nhận, nội dung CMS khác dữ liệu mẫu Figma, dữ liệu CMS nhập sai nhưng web hiển thị đúng CMS → chỉ ghi chú cho người dùng)
 - **bug layout/pixel phải ghi nguyên nhân gốc** (cách tìm: `qa-pixel-check` mục 4):
@@ -83,9 +84,16 @@ Tracker là một trang claude.ai (Artifact) dùng chung cho team: xem bug, đ�
 3. Publish bằng tool Artifact: `file_path: tracker/index.html`, `icon: "bug"`, `capabilities: {"assets":{"upload":"interact"},"db":{},"downloads":{},"user":{"scopes":["profile"]}}`.
 4. Ghi link trả về vào `qa-config.json → tracker.url`.
 5. Báo người dùng làm 2 việc trên trang Tracker (Claude không tự làm được):
-   - **Share** → chọn **Anyone with the link** (mọi người có link), cho phép tương tác, để dev mở link là comment và đổi trạng thái được.
+   - **Share** → chọn **Anyone with the link** (mọi người có link), cho phép tương tác. Khi đó ai mở link cũng sửa bug, comment và đổi trạng thái được.
    - **Copy link** → mở 1 bug bất kỳ, bấm "Copy link", dán link chia sẻ vào ô được hỏi. Tracker dùng link này để tạo link riêng từng bug (`…#ABC-012`).
 - Tracker đã có thì không tạo mới. Một Tracker chứa được nhiều dự án (mỗi dự án 1 `bugPrefix`).
+- Tracker tạo từ mẫu cũ (chưa có nút **Sửa**): publish lại `tracker/index.html` từ mẫu mới vào đúng `tracker.url` khi người dùng yêu cầu. Dữ liệu bug, comment, ảnh vẫn giữ nguyên.
+
+### Sửa bug trên Tracker
+Mở bug → **Sửa**. Các trường sửa được: tiêu đề, trang, nhóm, mức độ, kiểm bằng, browser, width, môi trường, loại, element, mong đợi / thực tế / cách tái hiện. Ảnh: thêm ảnh mới, hoặc bỏ chọn ảnh cũ để gỡ khỏi bug.
+- Không đổi được dự án và mã bug, vì mã bug đánh theo prefix của dự án.
+- Mỗi lần lưu ghi 1 dòng "Sửa bug: <các trường>" vào **Trao đổi** (ai sửa, lúc nào), nên vẫn biết ai đã sửa gì.
+- Bug đã sửa trên Tracker sẽ không bị Import đè, vì Import bỏ qua `key` đã có. Bug tự động mà dev đã sửa nội dung vẫn được `compare_runs.py` verify theo `key`/`check`.
 
 ### 3b. Đưa bug lên
 - Thường dùng: mở Tracker → Import → chọn `bugs.json` cùng toàn bộ ảnh trong `upload/`. Tracker tự gán mã `<bugPrefix>-001…`, bỏ qua bug trùng `key`.

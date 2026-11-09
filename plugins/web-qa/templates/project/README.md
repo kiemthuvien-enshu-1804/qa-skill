@@ -53,7 +53,9 @@ qa-<dự-án>/
 ├─ qa-config.json              DỰ ÁN — site, Figma, CMS, pages, checklist, Tracker
 ├─ .env.local                  DỰ ÁN — API key, token (không commit)
 ├─ checklist/                  DỰ ÁN — checklist .xlsx + checklist-map.json
-├─ specs/                      DỰ ÁN — figma-map.json, spec/PNG Figma (tự sinh)
+├─ specs/                      DỰ ÁN — figma-map.json, spec/PNG Figma (tự sinh); figma-conflicts.md (Figma không thống nhất,
+│                                tester chọn) + figma-decisions.json (lựa chọn của tester); styleguide.json (quy tắc responsive);
+│                                <page>.logic.json (quy tắc/nhánh từ Figma comment → seed + check)
 ├─ flows/                      DỰ ÁN — kịch bản logic Playwright
 ├─ cms-seed/                   DỰ ÁN — <page>.seed.json + <page>.applied.json (dữ liệu test CMS)
 └─ runs/<ngày-giờ>/            DỰ ÁN — kết quả mỗi lần chạy: bug, ảnh, checklist_result, tester-prompt
@@ -81,7 +83,7 @@ qa-<dự-án>/
 Scripts tự đọc `.env.local`; `.gitignore` loại nó khỏi git; `.claude/settings.json` chặn Claude đọc nó.
 
 ## Scripts (trong plugin, `${CLAUDE_PLUGIN_ROOT}/scripts/`; Claude gọi qua skill)
-`init`, `doctor`, `figma_api.py`, `measure`, `visual_diff`, `responsive_sweep`, `cms_seed`, `cms_check`, `cms_record_check`, `page_checks`, `flow_template`, `make_bugs.py`, `compare_runs.py`, `update_checklist.py`. Chi tiết xem README của repo plugin.
+`init`, `doctor`, `figma_api.py`, `measure`, `visual_diff`, `responsive_sweep`, `cms_seed`, `cms_check`, `cms_record_check`, `page_checks`, `logic_coverage.py`, `flow_template`, `make_bugs.py`, `compare_runs.py`, `update_checklist.py`. Chi tiết xem README của repo plugin.
 
 ## Giới hạn
 - WebKit ≈ Safari, không phải Safari thật → xác nhận trên Mac/iPhone, ghi vào `manual_bugs.json`.

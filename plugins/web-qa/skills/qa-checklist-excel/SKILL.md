@@ -24,6 +24,7 @@ Xác định dòng tiêu đề, cột ID, cột nội dung mục, cột ngữ c�
 | Responsive / browser | `responsive.<page>.json` (NG chỉ ở browser lỗi) |
 | Dữ liệu CMS | `cms.<page>.json` |
 | Logic, chung mọi trang | `flow.*.json` gồm flow riêng và `flow.<page>.common.*` của `page_checks.mjs` (check `pass`/`fail`; `na` → NA) |
+| Logic theo Figma comment | `logic.<page>.json`: mục checklist chỉ `OK` khi **mọi nhánh** gắn với mục đó đạt. Còn nhánh thiếu dữ liệu / thiếu check / tester kiểm / cần hỏi → để trống. Script tự bỏ `OK` của các mục trong `checklistBlocked` và đưa nhánh còn thiếu vào prompt tester |
 
 Đối chiếu checklist mẫu (`*Template*.xlsx`) → nguồn bằng chứng:
 | Nhóm mục (sheet trang) | Nguồn |

@@ -22,6 +22,7 @@ done
 1. `measure.*.json → findings[]`: mỗi dòng là 1 thuộc tính lệch, có `expected/actual/delta` và ảnh `shots/*.png` đã vẽ theo quy tắc ảnh bug (khung đỏ + giá trị Figma mong muốn cạnh khung; ảnh sạch `*.raw.png`).
    - Một lỗi y lệch dọc (mọi element phía dưới đều lệch `y` cùng một khoảng) thường do 1 section phía trên cao/thấp sai → chỉ báo **section gốc**, bỏ các lệch `y` kéo theo (ghi chú "kéo theo" trong bug gốc).
    - Lệch chỉ ở 1 browser → lỗi riêng browser; giống nhau mọi browser → lỗi CSS.
+   - Finding có `figmaConflict`: Figma chưa thống nhất giá trị cho thuộc tính đó (`specs/figma-conflicts.md`). Không báo bug cho đến khi tester chọn; `make_bugs.py` tự giữ lại.
    - Element có nội dung từ CMS: bỏ finding `text` (nội dung chỉ so web ↔ CMS ở `qa-cms-data`); vẫn giữ finding font/màu/kích thước/khoảng cách.
    - **Tìm nguyên nhân gốc trước khi báo bug layout** (x, y, width, height, gap, padding): xem mục 4.
 2. `visual.*.sbs.png` (Figma | thực tế | diff): XEM ẢNH bằng Read. Các `bands` có mismatch cao là vùng cần soi: ảnh sai, thiếu icon, sai thứ tự, sai màu nền… → những gì spec không bắt được thì ghi vào `$RUN/manual_bugs.json`.

@@ -82,6 +82,8 @@ for (const el of spec.elements) {
     findings.push({
       ...mk(el, d.prop, fmt(d.expected), fmt(d.actual), severity(d)),
       delta: d.delta ?? null,
+      // Figma có nhiều giá trị khác nhau cho thuộc tính này (figma_api.py consistency) → bug bị giữ lại đến khi tester chọn
+      figmaConflict: el.conflicts?.[d.prop] || null,
       screenshot: shot,
     });
   }

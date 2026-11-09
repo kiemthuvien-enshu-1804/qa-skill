@@ -19,6 +19,7 @@ node $S/cms_check.mjs --page <page> --out $RUN                      # nếu tran
 node $S/cms_record_check.mjs --page <page> --out $RUN               # thay dòng trên nếu trang dựng từ 1 bản ghi
 for vp in sp pc; do node $S/page_checks.mjs --page <page> --vp $vp --out $RUN; done
 for vp in sp pc; do WEBQA_ROOT="${CLAUDE_PLUGIN_ROOT}" node flows/<page>.flow.mjs --out $RUN --vp $vp; done   # nếu có flow
+$PY $S/logic_coverage.py --page <page> --run $RUN                  # nếu có specs/<page>.logic.json
 $PY $S/make_bugs.py --run $RUN
 $PY $S/compare_runs.py --tracker tracker-export.json --rerun $RUN/bugs.json --pages <page>
 ```

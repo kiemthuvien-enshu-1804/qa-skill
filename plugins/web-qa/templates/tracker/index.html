@@ -126,6 +126,9 @@ main{padding-block:4px 48px}
 .cmt .who{font-size:12.5px;color:var(--muted)}.cmt .who b{color:var(--fg);font-weight:600}
 .cmt .txt{white-space:pre-wrap;overflow-wrap:anywhere}
 .cmt.sys .txt{color:var(--muted);font-size:13px}
+.oldshots{display:flex;flex-wrap:wrap;gap:8px}
+.oldshots label{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.oldshots img{width:96px;height:64px;object-fit:cover;border:1px solid var(--line);border-radius:var(--r);background:var(--sunk)}
 textarea{width:100%;min-height:76px;border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;background:var(--bg);resize:vertical}
 .compose{display:flex;flex-direction:column;gap:8px}
 .compose .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
@@ -196,7 +199,7 @@ dialog h3{margin:0;font-size:16px}
 
 <dialog id="newDlg">
   <form id="newForm">
-    <h3>Thêm bug</h3>
+    <h3 id="newHead">Thêm bug</h3>
     <div class="two">
       <div class="field"><label for="nProject">Dự án</label><select id="nProject"></select></div>
       <div class="field" id="nNewWrap" hidden><label for="nNewName">Tên dự án mới · prefix</label><div style="display:flex;gap:6px"><input id="nNewName" placeholder="la-class" style="flex:1;min-width:0"><input id="nNewPrefix" placeholder="LC" style="width:70px"></div></div>
@@ -211,18 +214,20 @@ dialog h3{margin:0;font-size:16px}
       <div class="field"><label for="nSource">Kiểm bằng</label><select id="nSource"><option value="chrome">Claude in Chrome</option><option value="manual">Kiểm tay</option><option value="auto">Tự động (VS Code)</option></select></div>
     </div>
     <div class="two">
-      <div class="field"><label for="nBrowser">Browser</label><select id="nBrowser"><option value="chromium">Chrome</option><option value="msedge">Edge</option><option value="webkit">Safari</option></select></div>
-      <div class="field"><label for="nVp">Width (px)</label><input id="nVp" inputmode="numeric" placeholder="1536"></div>
+      <div class="field"><label for="nBrowser">Browser (Ctrl/⌘ + bấm để chọn nhiều)</label><select id="nBrowser" multiple size="3"><option value="chromium" selected>Chrome</option><option value="msedge">Edge</option><option value="webkit">Safari</option></select></div>
+      <div class="field"><label for="nVp">Width (px, nhiều width cách nhau dấu phẩy)</label><input id="nVp" placeholder="375, 1536"></div>
     </div>
     <div class="two">
       <div class="field"><label for="nEnv">Môi trường (chỉ khi lỗi riêng 1 môi trường)</label><input id="nEnv" placeholder="Safari 18 · iPhone 15 (iOS 18)"></div>
       <div class="field"><label for="nType">Loại</label><select id="nType"><option>layout</option><option>typography</option><option>color</option><option>component</option><option>content</option><option>logic</option><option>figma-comment</option><option>responsive</option><option>cms</option><option>tracking</option></select></div>
     </div>
+    <div class="field"><label for="nElem">Element (selector / vị trí)</label><input id="nElem" placeholder=".p-news__title"></div>
     <div class="field"><label for="nExp">Figma / mong đợi</label><textarea id="nExp"></textarea></div>
     <div class="field"><label for="nAct">Thực tế</label><textarea id="nAct"></textarea></div>
     <div class="field"><label for="nSteps">Cách tái hiện</label><textarea id="nSteps"></textarea></div>
-    <div class="field"><label for="nShots">Ảnh / GIF</label><input type="file" id="nShots" multiple accept="image/png,image/jpeg,image/webp,image/gif"></div>
-    <div class="compose"><div class="actions"><button class="btn" type="button" id="newCancel">Huỷ</button><button class="btn primary" type="submit">Tạo bug</button></div></div>
+    <div class="field" id="nOldWrap" hidden><span>Ảnh hiện có (bỏ chọn để gỡ khỏi bug)</span><div class="oldshots" id="nOld"></div></div>
+    <div class="field"><label for="nShots" id="nShotsLabel">Ảnh / GIF</label><input type="file" id="nShots" multiple accept="image/png,image/jpeg,image/webp,image/gif"></div>
+    <div class="compose"><div class="actions"><button class="btn" type="button" id="newCancel">Huỷ</button><button class="btn primary" type="submit" id="newSubmit">Tạo bug</button></div></div>
   </form>
 </dialog>
 
@@ -335,7 +340,7 @@ function renderList(){
   const main=$("#main"); const list=filtered();
   if(!state.bugs.length){
     main.replaceChildren(h("div",{class:"empty"},h("b",{},"Chưa có bug nào."),h("br"),
-      h("span",{class:"note"}, assets? "Bấm Import và chọn bugs.json cùng ảnh trong upload/ (do skill qa-bug-report tạo), hoặc thêm tay bằng “+ Bug”." : "QA sẽ đưa bug lên đây. Khi có bug, bấm vào từng dòng để xem chi tiết, đổi trạng thái và comment.")));
+      h("span",{class:"note"}, assets? "Bấm Import và chọn bugs.json cùng ảnh trong upload/ (do skill qa-bug-report tạo), hoặc thêm tay bằng “+ Bug”." : "QA sẽ đưa bug lên đây. Khi có bug, bấm vào từng dòng để xem chi tiết, sửa bug, đổi trạng thái và comment.")));
     return;
   }
   if(!list.length){ main.replaceChildren(h("div",{class:"empty"},"Không có bug khớp bộ lọc.")); return; }
@@ -417,6 +422,7 @@ function renderSheet(b){
       h("div",{style:"flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"},
         h("div",{style:"display:flex;gap:8px;align-items:center;flex-wrap:wrap"},h("span",{class:"code"},b.code||""),pill(b.status||"open"),h("span",{class:"note"},"· "+(b.severity||"")+" · "+(GROUPS.find(g=>g[0]===b.group)||["","" ])[1])),
         h("h3",{id:"dTitle"},b.title||"")),
+      state.canWrite? h("button",{class:"btn",onclick:()=>openEdit(b),title:"Sửa nội dung bug"},"Sửa"):null,
       h("button",{class:"btn",onclick:()=>copyLink(b),title:"Copy link bug này"},"Copy link"),
       h("button",{class:"btn","aria-label":"Đóng",onclick:()=>closeBug()},"✕")),
     h("div",{class:"sheet-body"},
@@ -429,7 +435,7 @@ function renderSheet(b){
         kv("Môi trường", b.env),
         kv("Element", b.element? h("span",{class:"mono"},b.element):null),
         kv("Loại", b.type==='cms'?'Dữ liệu CMS':b.type), kv("Kiểm bằng", {auto:"Tự động (VS Code / Playwright)",chrome:"Claude in Chrome",manual:"Kiểm tay"}[b.source||"manual"]), kv("Figma", fig? h("a",{href:fig,target:"_blank",rel:"noopener"},"Mở node "+(b.figma.nodeId||"")) : null),
-        kv("Lần chạy", b.run), kv("Tạo lúc", fmtDate(b.createdAt))),
+        kv("Lần chạy", b.run), kv("Tạo lúc", fmtDate(b.createdAt)), b.editedAt? kv("Sửa lúc", fmtDate(b.editedAt)) : null),
       (b.expected||b.actual)? h("div",{class:"cmp"},
         h("div",{},h("h4",{},"Figma / mong đợi"),h("pre",{},b.expected||"—")),
         h("div",{class:"act"},h("h4",{},"Thực tế"),h("pre",{},b.actual||"—"))):null,
@@ -440,7 +446,7 @@ function renderSheet(b){
         h("textarea",{id:"cmtText",placeholder:"Comment cho QA / dev… (dev: ghi rõ đã sửa gì, commit/branch nếu có)"}),
         h("div",{class:"actions"},
           h("button",{class:"btn",type:"button",onclick:()=>sendComment(b,"fixed")},"Comment + fixed"),
-          h("button",{class:"btn primary",type:"button",onclick:()=>sendComment(b)},"Gửi comment"))) : h("p",{class:"note"},"Bạn đang xem ở quyền chỉ đọc. Nhờ chủ tracker chia sẻ quyền Contributor để đổi trạng thái và comment."))
+          h("button",{class:"btn primary",type:"button",onclick:()=>sendComment(b)},"Gửi comment"))) : h("p",{class:"note"},"Bạn đang xem ở quyền chỉ đọc. Nhờ chủ tracker chia sẻ quyền Contributor để sửa bug, đổi trạng thái và comment."))
   );
   renderThread();
 }
@@ -456,7 +462,9 @@ async function renderThread(){
     const sys=c.kind==="status";
     return h("div",{class:"cmt"+(sys?" sys":"")},h("img",{src:av,alt:""}),
       h("div",{},h("div",{class:"who"},h("b",{},name)," · "+fmtDate(c.at)),
-        sys? h("div",{class:"txt"},"Đổi trạng thái: ",pill(c.from||"open")," → ",pill(c.to), c.text?"\n"+c.text:"") : h("div",{class:"txt"},c.text)));
+        sys? h("div",{class:"txt"},"Đổi trạng thái: ",pill(c.from||"open")," → ",pill(c.to), c.text?"\n"+c.text:"")
+          : c.kind==="edit"? h("div",{class:"txt",style:"color:var(--muted);font-size:13px"},"Sửa bug: "+(c.fields||[]).map(f=>FIELD_VI[f]||f).join(", ")+(c.text?"\n"+c.text:""))
+          : h("div",{class:"txt"},c.text)));
   }));
 }
 let busy=false;
@@ -541,15 +549,65 @@ $("#importGo").addEventListener("click",async()=>{
 });
 
 /* ---------- manual new bug ---------- */
-$("#newBtn").addEventListener("click",()=>{ $("#newForm").reset(); $("#nShots").closest(".field").hidden=!assets;
+/* ---------- new / edit bug ---------- */
+let editing=null; // bug đang sửa (null = tạo mới)
+const FIELD_VI={title:"tiêu đề",path:"trang",group:"nhóm",severity:"mức độ",source:"kiểm bằng",browsers:"browser",viewports:"width",env:"môi trường",type:"loại",element:"element",expected:"mong đợi",actual:"thực tế",steps:"cách tái hiện",screenshots:"ảnh"};
+function fillProjects(sel){
   const ps=projects().filter(p=>p!=="—");
-  $("#nProject").replaceChildren(...ps.map(p=>h("option",{value:p,selected:p===state.project},`${p} · ${prefixOf(p)}`)), h("option",{value:"__new",selected:!ps.length},"+ Dự án mới…"));
+  $("#nProject").replaceChildren(...ps.map(p=>h("option",{value:p,selected:p===sel},`${p} · ${prefixOf(p)}`)), h("option",{value:"__new",selected:!ps.length},"+ Dự án mới…"));
   $("#nNewWrap").hidden=$("#nProject").value!=="__new";
-  $("#newDlg").showModal(); });
+}
+function setBrowsers(list){ [...$("#nBrowser").options].forEach(o=>o.selected=(list||[]).includes(o.value)); }
+function formValues(){
+  const vps=$("#nVp").value.split(/[,\s]+/).map(Number).filter(n=>n>0);
+  const br=[...$("#nBrowser").selectedOptions].map(o=>o.value);
+  return {title:$("#nTitle").value.trim(),path:$("#nPath").value.trim(),group:$("#nGroup").value,severity:$("#nSev").value,source:$("#nSource").value,
+    browsers:br.length?br:["chromium"],viewports:vps,env:$("#nEnv").value.trim(),type:$("#nType").value,element:$("#nElem").value.trim(),
+    expected:$("#nExp").value,actual:$("#nAct").value,steps:$("#nSteps").value};
+}
+$("#newBtn").addEventListener("click",()=>{ editing=null; $("#newForm").reset(); setBrowsers(["chromium"]);
+  $("#newHead").textContent="Thêm bug"; $("#newSubmit").textContent="Tạo bug"; $("#nShotsLabel").textContent="Ảnh / GIF";
+  $("#nShots").closest(".field").hidden=!assets; $("#nOldWrap").hidden=true; $("#nProject").disabled=false;
+  fillProjects(state.project); $("#newDlg").showModal(); });
+function openEdit(b){
+  editing=b; $("#newForm").reset();
+  $("#newHead").textContent="Sửa bug "+(b.code||""); $("#newSubmit").textContent="Lưu thay đổi"; $("#nShotsLabel").textContent="Thêm ảnh / GIF";
+  fillProjects(b.project); $("#nProject").disabled=true; $("#nNewWrap").hidden=true; // mã bug theo prefix dự án → không đổi dự án khi sửa
+  $("#nTitle").value=b.title||""; $("#nPath").value=b.path||b.page||""; $("#nGroup").value=b.group||"common"; $("#nSev").value=b.severity||"medium";
+  $("#nSource").value=b.source||"manual"; setBrowsers(b.browsers||[]); $("#nVp").value=(b.viewports||[]).join(", "); $("#nEnv").value=b.env||"";
+  if(b.type && ![...$("#nType").options].some(o=>o.value===b.type)) $("#nType").append(h("option",{value:b.type},b.type));
+  $("#nType").value=b.type||"layout"; $("#nElem").value=b.element||""; $("#nExp").value=b.expected||""; $("#nAct").value=b.actual||""; $("#nSteps").value=b.steps||"";
+  const shots=(b.screenshots||[]).filter(Boolean);
+  $("#nOld").replaceChildren(...shots.map((id,i)=>h("label",{},h("img",{src:"/_blob/"+id,alt:`Ảnh ${i+1}`}),h("span",{},h("input",{type:"checkbox",checked:true,"data-id":id})," giữ"))));
+  $("#nOldWrap").hidden=!shots.length; $("#nShots").closest(".field").hidden=!assets;
+  $("#newDlg").showModal();
+}
 $("#nProject").addEventListener("change",()=>{ $("#nNewWrap").hidden=$("#nProject").value!=="__new"; });
-$("#newCancel").addEventListener("click",()=>$("#newDlg").close());
+$("#newCancel").addEventListener("click",()=>{ editing=null; $("#newDlg").close(); });
 $("#newForm").addEventListener("submit",async e=>{
   e.preventDefault();
+  if(busy) return;
+  const v=formValues();
+  if(editing){
+    const b=editing; busy=true; $("#newSubmit").disabled=true;
+    try{
+      const keep=[...$("#nOld").querySelectorAll("input[data-id]")].filter(x=>x.checked).map(x=>x.dataset.id);
+      if(assets) for(const f of $("#nShots").files){ try{ keep.push((await assets.upload(f,{type:f.type||"image/png"})).id); }catch{ toast("Ảnh "+f.name+" không tải lên được"); } }
+      const next={...v,screenshots:keep};
+      const same=(a,c)=>JSON.stringify(a??"")===JSON.stringify(c??"");
+      const changed=Object.keys(FIELD_VI).filter(k=>!same(b[k]??(Array.isArray(next[k])?[]:""),next[k]));
+      if(!changed.length){ toast("Không có thay đổi"); $("#newDlg").close(); editing=null; return; }
+      const patch=Object.fromEntries(changed.map(k=>[k,next[k]]));
+      if(changed.includes("path") && (!b.page || b.page===b.path)) patch.page=next.path;
+      Object.assign(patch,{updatedAt:nowIso(),editedAt:nowIso(),editedBy:state.me,commentCount:(b.commentCount||0)+1});
+      await db.doc("bugs/"+b._id).update(JSON.parse(JSON.stringify(patch)));
+      // lịch sử sửa: ai sửa, lúc nào, sửa trường nào (hiện trong "Trao đổi")
+      await db.collection(`bugs/${b._id}/comments`).add({kind:"edit",fields:changed,text:"",by:state.me,at:nowIso()});
+      $("#newDlg").close(); editing=null; toast(`Đã lưu ${b.code||"bug"} (${changed.map(f=>FIELD_VI[f]).join(", ")})`);
+    }catch(err){ toast(err.code==="invalid_argument"?"Bạn không có quyền sửa bug.":"Lưu không được, thử lại."); }
+    finally{ busy=false; $("#newSubmit").disabled=false; }
+    return;
+  }
   let project=$("#nProject").value, prefix;
   if(project==="__new"){
     project=$("#nNewName").value.trim(); prefix=$("#nNewPrefix").value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
@@ -558,10 +616,8 @@ $("#newForm").addEventListener("submit",async e=>{
   } else prefix=prefixOf(project);
   const id=Math.random().toString(36).slice(2,12); const shotIds=[];
   if(assets) for(const f of $("#nShots").files){ try{ shotIds.push((await assets.upload(f,{type:f.type||"image/png"})).id); }catch{} }
-  const doc={key:id,project,code:nextCodeFn(prefix)(),title:$("#nTitle").value.trim(),path:$("#nPath").value.trim(),page:$("#nPath").value.trim(),
-    group:$("#nGroup").value,severity:$("#nSev").value,type:$("#nType").value,expected:$("#nExp").value,actual:$("#nAct").value,steps:$("#nSteps").value,
-    viewports:(+$("#nVp").value?[+$("#nVp").value]:[]),browsers:[$("#nBrowser").value],screenshots:shotIds,status:"open",commentCount:0,createdAt:nowIso(),updatedAt:nowIso(),createdBy:state.me};
-  doc.source=$("#nSource").value; if($("#nEnv").value.trim()) doc.env=$("#nEnv").value.trim();
+  const doc={key:id,project,code:nextCodeFn(prefix)(),...v,page:v.path,screenshots:shotIds,status:"open",commentCount:0,createdAt:nowIso(),updatedAt:nowIso(),createdBy:state.me};
+  if(!doc.env) delete doc.env; if(!doc.element) delete doc.element;
   try{ await db.doc("bugs/"+id).set(doc); $("#newDlg").close(); toast("Đã tạo "+doc.code); }
   catch(err){ toast(err.code==="invalid_argument"?"Bạn không có quyền tạo bug.":"Tạo bug không được, thử lại."); }
 });

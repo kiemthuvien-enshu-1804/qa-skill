@@ -1,6 +1,6 @@
 ---
 name: qa-figma-spec
-description: Trích thông số thiết kế từ Figma (vị trí, kích thước, font, màu, radius, padding/gap) của frame SP và PC thành file spec JSON để đo tự động, kèm ảnh PNG frame và Figma comments. Dùng trước khi pixel-check một trang.
+description: Trích thông số thiết kế từ Figma (vị trí, kích thước, font, màu, radius, padding/gap) của frame SP và PC thành file spec JSON để đo tự động, kèm ảnh PNG frame và Figma comments; đối chiếu cùng 1 component giữa page common_component, các màn khác và SP ↔ PC — chỗ Figma không thống nhất thì đưa tester chọn. Dùng trước khi pixel-check một trang.
 ---
 
 # Figma → spec JSON
@@ -41,7 +41,51 @@ Spec nháp có hàng trăm element — làm gọn và gắn selector:
 1. Mở trang thật (Playwright hoặc đọc source) để lấy selector ổn định (class BEM, `data-*`). Gán `selector` cho text/heading/button/card/section chính. Element không gán selector sẽ được tìm theo `text`.
 2. Xoá element trang trí, ảnh nền, node ẩn, text lặp (giữ 1 mẫu cho list/card), dùng `index` nếu selector trùng.
 3. Kiểm tra `frameWidth` == viewport của dự án (375 / 1536 / 1600…). Nếu lệch, cập nhật `viewports` trong `qa-config.json`.
-4. Figma comments thuộc frame (lọc theo node id con của frame) → ghi danh sách yêu cầu vào `specs/<page>.notes.md` để kiểm tay ở bước bug.
+4. Figma comments thuộc frame (lọc theo node id con của frame) → ghi danh sách yêu cầu vào `specs/<page>.notes.md`.
+   - `comments.json` gồm các thread: comment gốc + `replies` + `latest` (nội dung mới nhất) + `resolved`. Quy tắc lấy theo `latest`.
+   - Không có token (MCP) thì đọc comment trên Figma hoặc nhờ người dùng export, và ghi theo cùng cấu trúc.
+   - Comment về logic/luồng hiển thị (số bài, sort, rỗng, thiếu field, NEW, kỳ đăng, ẩn/hiện, validate) → tách thành quy tắc và nhánh trong `specs/<page>.logic.json` (`qa-logic-flow` mục 0).
+
+## Đối chiếu thông số giữa các nguồn Figma (bắt buộc, trước `qa-pixel-check`)
+Figma hay không thống nhất: cùng 1 component nhưng component gốc, các màn khác nhau, SP và PC lại có thông số khác nhau. Vì vậy trước khi đo, phải so thông số của component trên trang đang test với 3 nguồn. Chỗ nào Figma khác nhau thì **đưa tester chọn**, không tự quyết.
+
+1. **Tìm page dùng chung.** `$PY $S/figma_api.py pages --file <fileKey> --out specs/figma-pages.json`. Không có token thì gọi `get_metadata` không truyền nodeId.
+   - Tìm page theo `qa-config.json → figma.commonPages` (mặc định `components` ≈ `common_component`, `styleGuide` ≈ `common_StyleGuide`).
+   - Ghi node id vào `specs/figma-map.json → common: {components, styleGuide}`. Không tìm thấy thì ghi `null`.
+2. **Thu thông số của component trên trang đang test.**
+   - Cách A: `spec` tự ghi `component` cho mọi element nằm trong instance (`family` = tên component bỏ đoạn SP/PC; `part` = node con trong component). Khi làm gọn spec phải giữ nguyên `component`.
+   - Cách B: tự thêm `"component": {"family": "<tên instance bỏ SP/PC, vd Common/h2>", "part": "<tên node con, rỗng nếu là chính instance>"}` cho element nằm trong `<instance>` của `get_metadata`.
+3. **Lấy thông số từ 3 nguồn.**
+   - **Component gốc** (page common_component):
+     - Cách A: script tự lấy qua REST và lưu vào `specs/figma-common-components.json`.
+     - Cách B: dùng `get_design_context` cho component gốc, rồi ghi file đó theo cùng schema (`page: "common"`, element có `component`).
+     - Component từ library ngoài file thì bỏ qua và ghi chú lại.
+   - **Màn khác dùng cùng component:**
+     - Chọn 1–2 frame khác trong `specs/figma-frames.json` (hoặc trang khác trong `figma-map.json`) có instance cùng `family`.
+     - Cách A: `spec` của các frame đó ghi vào `specs/_index/<page>.<vp>.json` (spec nháp để so, không làm gọn).
+     - Cách B: dùng `get_design_context` cho instance đó rồi ghi vào cùng chỗ.
+   - **SP ↔ PC:** spec SP và PC của trang.
+4. **Chạy so sánh** (Cách B không cần `--file`, vì chỉ so các file đã có):
+   ```bash
+   $PY $S/figma_api.py consistency --file <fileKey> --specs "specs/<page>.sp.json" "specs/<page>.pc.json" --index "specs/_index/*.json" --out specs/figma-conflicts.json
+   ```
+   Kết quả là `specs/figma-conflicts.md`, chia 3 nhóm:
+   - **khác component gốc;**
+   - **khác giữa các màn cùng viewport;**
+   - **SP ≠ PC.**
+
+   Mỗi dòng có các giá trị, nơi dùng từng giá trị (`page.vp nodeId`) và giá trị đề xuất. Thứ tự đề xuất:
+   1. giá trị của component gốc;
+   2. nếu không có component gốc thì lấy giá trị dùng ở nhiều chỗ nhất;
+   3. hoà nhau thì để `?`.
+5. **Báo tester 1 bảng** (lấy từ `figma-conflicts.md`, kèm link node Figma) để tester chọn giá trị đúng. Không tự chọn.
+   - Trong lúc chờ, vẫn chạy tiếp các bước khác. Finding pixel của thuộc tính đang tranh chấp sẽ bị giữ lại: `measure` gắn `figmaConflict`, còn `make_bugs` đưa finding đó vào mục "Chờ tester chọn thông số Figma" và không đẩy lên Tracker.
+   - Nhóm SP ≠ PC mặc định là `per-frame` (mỗi viewport giữ giá trị riêng, thường là thiết kế có chủ ý). Nhóm này không bị giữ bug, chỉ cần tester xác nhận.
+6. **Tester chọn xong** → ghi vào `specs/figma-decisions.json`, dạng `{"<key>": {"value": 24, "by": "<tester>", "note": "…"}}`.
+   - `"value": "per-frame"` = giữ giá trị riêng của từng frame.
+   - Chạy lại lệnh `consistency`: script ghi giá trị đã chọn vào `expect` của spec và bỏ đánh dấu.
+   - Chạy lại `measure` cho trang đó.
+   - Nên báo designer sửa Figma cho thống nhất.
 
 ## Schema
 ```json
@@ -57,3 +101,9 @@ Spec nháp có hàng trăm element — làm gọn và gắn selector:
 }
 ```
 `x/y` tính từ góc trên trái của frame (= trang). Chỉ ghi thuộc tính cần kiểm.
+Các trường script tự thêm:
+- `component`: danh sách `{family, id, variant, part, partName}`, xếp từ instance ngoài cùng vào trong.
+- `styles`: tên text style / color style trong Figma.
+- `conflicts`: `{prop: key}`, chỉ do `consistency` ghi.
+
+Không sửa tay các trường này.

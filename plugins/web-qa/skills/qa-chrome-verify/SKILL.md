@@ -7,7 +7,7 @@ description: Phần của tester — dùng Claude in Chrome để kiểm nốt c
 
 ## Chuẩn bị (tester)
 - Extension Claude in Chrome đã đăng nhập.
-- Tracker: được share quyền **Contributor** trở lên (tạo bug, đính kèm ảnh/GIF, đổi trạng thái, comment).
+- Tracker: được share quyền **Contributor** trở lên (tạo bug, sửa bug — nút **Sửa** trong chi tiết bug, đính kèm ảnh/GIF, đổi trạng thái, comment).
 - Trong Chrome đã đăng nhập sẵn: Gmail/Outlook của email test, CMS admin (nếu có mục cần), Basic Auth của site test.
 - Checklist `_result.xlsx`: tốt nhất mở bằng Excel Online / Google Sheets để Claude điền thẳng; nếu mở trên máy thì Claude trả bảng kết quả để tester dán.
 

@@ -182,12 +182,12 @@ Khi plugin có bản mới, file mẫu trong thư mục QA cũ (`README.md`, `qa
 | Skill | Việc |
 |---|---|
 | `web-qa` | điều phối toàn bộ, init/doctor thư mục QA |
-| `qa-figma-spec` | spec SP/PC + PNG + Figma comments |
+| `qa-figma-spec` | spec SP/PC + PNG + Figma comments; so cùng component giữa `common_component`, các màn khác, SP ↔ PC → Figma không thống nhất thì tester chọn |
 | `qa-cms-seed` | tạo/dọn dữ liệu test `[PREFIX001]` trên microCMS dev |
 | `qa-cms-data` | dữ liệu CMS API ↔ trang |
-| `qa-logic-flow` | check chung mọi trang (OGP, GTM, tel, ảnh, link, breadcrumb, 404) + flow riêng (menu, slider, filter, pagination, form validation…) |
+| `qa-logic-flow` | quy tắc/luồng từ Figma comment → nhánh if/else/biên, mỗi nhánh có data seed + check, đo độ phủ (`logic_coverage.py`); check chung mọi trang (OGP, GTM, tel, ảnh, link, breadcrumb, 404) + flow riêng (menu, slider, filter, pagination, form validation…) |
 | `qa-pixel-check` | đo px so với Figma, diff ảnh |
-| `qa-responsive` | 360→1920 × Chrome/Edge/WebKit |
+| `qa-responsive` | theo `common_StyleGuide` của Figma (không có thì tiêu chuẩn chung), 360→1920 × Chrome/Edge/WebKit |
 | `qa-bug-report` | bugs.json → Bug Tracker (tiếng Việt, severity high/medium/low; chưa có Tracker thì tạo mới) |
 | `qa-checklist-excel` | điền checklist Excel + prompt cho tester |
 | `qa-chrome-verify` | phần tester: Claude in Chrome kiểm nốt / verify |

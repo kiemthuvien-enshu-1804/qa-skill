@@ -51,7 +51,15 @@ Mỗi API (endpoint) của CMS cần một file seed. Đặt tên file theo `nam
 | Số lượng lớn | > 100 bài nếu trang có pagination (API microCMS trả tối đa 100/lần) |
 | Thiết kế | 1 bài `noPrefix` có text y hệt Figma, dùng cho pixel-check |
 
-Ngoài ra thêm ca từ **Figma comment về luồng**. Ví dụ comment ghi "TOP hiện tối đa 3 bài" thì seed ít nhất 4 bài; "NEW trong 7 ngày" thì có bài 6 ngày và 8 ngày trước; "không có ảnh thì dùng ảnh mặc định" thì có bài không ảnh.
+**Bắt buộc: phủ mọi nhánh trong `specs/<page>.logic.json`** (`qa-logic-flow` mục 0, bóc từ Figma comment về luồng). Bảng ca biên ở trên chỉ là phần tối thiểu.
+- Mỗi nhánh có `seed` phải có bài tương ứng trong file seed, cùng `key`.
+- `purpose` ghi id nhánh, vd `"purpose": "R01-a: 4 bài → TOP chỉ hiện 3"`. Một bài có thể phục vụ nhiều nhánh.
+- Có cả giá trị **đúng biên** và **2 bên biên**:
+  - "TOP hiện tối đa 3 bài" → có lúc 2, 3 và 4 bài, dùng category / filter riêng để có từng số lượng;
+  - "NEW trong 7 ngày" → bài 6, 7 và 8 ngày trước (`{days:-6}`, `{days:-7}`, `{days:-8}`);
+  - "không có ảnh thì dùng ảnh mặc định" → 1 bài có ảnh, 1 bài không ảnh.
+- Nhánh không tạo được dữ liệu (API dạng object, field chỉ admin chỉnh được, cần quyền khác) → đánh `manual` + lý do trong `logic.json`. Không bỏ qua mà không ghi lại.
+- Sau `--apply`, `logic_coverage.py` đối chiếu `cms-seed/<page>.applied.json` (`key`, `ok`). Bài PUT lỗi sẽ hiện ở nhóm "Thiếu dữ liệu".
 
 File mẫu tham khảo cách viết: `${CLAUDE_PLUGIN_ROOT}/skills/qa-cms-seed/templates/news.seed.json` (list + detail), `faq.seed.json` (accordion). Đây chỉ là ví dụ, nên phải đổi endpoint, field và ca test cho đúng API của dự án.
 - Nếu dev đã có sẵn bài thì bài seed (ngày gần nhất) đứng đầu, bài cũ bị đẩy xuống sau. Tính số bài theo chỗ hiển thị có giới hạn nhỏ nhất.

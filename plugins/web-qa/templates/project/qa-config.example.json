@@ -9,7 +9,9 @@
   "figma": {
     "url": "https://www.figma.com/design/<fileKey>/<tên-file>?node-id=<page-node>",
     "_note": "Chỉ cần 1 link file hoặc link page Figma. Frame SP/PC của từng trang được tự tìm và lưu ở map. Khai báo pages[].figma chỉ khi muốn ghi đè.",
-    "map": "specs/figma-map.json"
+    "map": "specs/figma-map.json",
+    "commonPages": { "components": "common.?component", "styleGuide": "style.?guide",
+      "_note": "Regex (không phân biệt hoa thường) tìm page dùng chung trong file Figma: component gốc (so thông số component) và style guide (quy tắc responsive). Không có page → bỏ qua, responsive theo tiêu chuẩn chung." }
   },
 
   "checklist": {

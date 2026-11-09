@@ -78,7 +78,15 @@ for ws in wb.worksheets:
                 if v not in (None, ""):
                     index[(ws.title.strip(), str(v).strip())] = r
 
-written, missing = 0, []
+# Mục checklist có nhánh logic chưa phủ / chưa kiểm xong (logic_coverage.py) → không được điền OK
+blocked = set()
+if a.run:
+    import glob as _g
+    for f in _g.glob(os.path.join(a.run, "logic.*.json")):
+        for c in json.load(open(f, encoding="utf-8")).get("checklistBlocked", []):
+            blocked.add((str(c.get("sheet", "")).strip(), str(c.get("row") or c.get("id") or "").strip()))
+
+written, missing, held_ok = 0, [], []
 for res in results:
     sheet = next((w for w in wb.worksheets if w.title.strip() == res["sheet"].strip()), None)
     if sheet is None:
@@ -86,6 +94,8 @@ for res in results:
     row = res.get("row") or index.get((sheet.title.strip(), str(res.get("id", res.get("item", ""))).strip()))
     if not row:
         missing.append(res); continue
+    if res["status"].upper() == "OK" and ({(sheet.title.strip(), str(row)), (sheet.title.strip(), str(res.get("id", "")).strip())} & blocked):
+        held_ok.append(res); continue  # để trống: còn nhánh logic chưa phủ → tester kiểm nốt
     status = {"OK": ok, "NG": ng, "NA": na, "N/A": na}.get(res["status"].upper(), res["status"])
     skey = "NA" if res["status"].upper() in ("NA", "N/A") else res["status"].upper()
     fill = FILL.get(skey)
@@ -118,6 +128,10 @@ if missing:
     print(f"[checklist] {len(missing)} kết quả không khớp dòng nào:")
     for x in missing[:20]:
         print("   ", x)
+if held_ok:
+    print(f"[checklist] {len(held_ok)} mục OK bị để trống vì còn nhánh logic chưa phủ (logic.<page>.md):")
+    for x in held_ok[:20]:
+        print("   ", x)
 
 # ---------- Mục còn trống → prompt bàn giao cho tester (Claude in Chrome) ----------
 remaining = []
@@ -144,6 +158,14 @@ if a.run:
         for c in d.get("checks", []):
             if c.get("status") in ("blocked", "needs-chrome"):
                 extra.append(f"- {d['page']} ({d['path']}): {c['name']} — {c.get('reason', '')}")
+    # nhánh logic chưa phủ / cần tester / cần hỏi designer (logic_coverage.py)
+    for f in glob.glob(os.path.join(a.run, "logic.*.json")):
+        d = json.load(open(f, encoding="utf-8"))
+        for x in d.get("rows", []):
+            if x["status"] == "manual":
+                extra.append(f"- {d['page']}: [{x['branch']}] {x['ruleTitle']} — khi {x['when']} → {x['expected']} ({x.get('detail', '')})")
+            elif x["status"] in ("no-seed", "no-check"):
+                extra.append(f"- {d['page']}: [{x['branch']}] {x['ruleTitle']} — khi {x['when']} → {x['expected']} (tự động chưa phủ: {x.get('detail', '')})")
     extra = sorted(set(extra))
 
 browsers = [b for b in m["resultCols"] if b != "all"]
