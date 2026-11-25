@@ -19,6 +19,16 @@ description: Thiết kế test case webapp theo hướng rủi ro từ tài li�
 ## 2. Thực hiện đúng 4 bước của rule
 Bước 1 trích rule và câu hỏi → Bước 2 chọn kỹ thuật → Bước 3 sinh TC, gộp và chống trùng → Bước 4 tự kiểm. Rule không có bước nào chưa cover thì giải thích lý do ở Phần D.
 
+### Bảo mật trong phạm vi chức năng
+Header, cookie, login/reset, CSRF là phần chung của cả webapp, đã nằm trong bộ `SEC` của `app-security-testcase`. Bộ của chức năng **không test lại** các mục này (D1), chỉ ghi `Tham chiếu: TC-SEC-xxx`. Chỉ thêm TC khi chức năng có thành phần riêng, và lấy cách test + mong đợi theo danh mục `05_Security_Checklist.md`:
+- Màn hình / API chỉ cho một số role → AZ02 (role thấp gọi thẳng API), cùng với case phân quyền G6.
+- Tài nguyên truy cập theo ID (`/xxx/:id`) → AZ03 (ID của user khác), AZ04 (tenant khác) nếu multi-tenant.
+- Field số / ID trong body → IN01 (`2147483648`, `-1`, `abc` → 400, không 500), gộp vào case validation negative.
+- Field text được hiển thị lại ở màn hình khác → IN02 (`<'"xss0"'>` hiển thị dạng text).
+- Upload / import / export → UP01–UP05, HDR07, IN06.
+
+Remarks ghi cả mã rule của chức năng và mã danh mục, ví dụ `Rule: R12, AZ03`. Bộ `SEC` chưa có thì ghi đề xuất ở Phần F.
+
 ## 3. Đầu ra (theo mẫu đã dùng trong `TESTCASE/`)
 - `TESTCASE/<M>_<Ten-chuc-nang>_TestDesign.md` gồm: bảng thông tin (link CSV, rule áp dụng, tài liệu nguồn kèm version/ngày, ngày lập), **0. Phạm vi** (trong / ngoài phạm vi kèm lý do, các đầu vào theo rule), **1. Dữ liệu kiểm thử TD-xx**, Phần A (rule), B (câu hỏi), D (ma trận truy vết), E (thống kê), F (đề xuất bổ sung), RTM + % coverage + requirement chưa test được + rủi ro.
 - `TESTCASE/<M>_<Ten-chuc-nang>_TestCase.csv` (Phần C): header **y hệt** CSV template trong `RULES/`, mã hoá **UTF-8 có BOM**, xuống dòng trong ô bằng `\n` và đặt ô trong ngoặc kép.

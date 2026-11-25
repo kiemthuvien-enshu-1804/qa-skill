@@ -28,6 +28,11 @@ S="${CLAUDE_PLUGIN_ROOT}/scripts"; T="<docs.repo>/<docs.testing>"
 7. Chạy thử: `node "$S/backlog.mjs" create --from <drafts.json>` (dry-run), để kiểm loại issue, ưu tiên, người xử lý, parent, số ảnh, và vẽ bản xem trước của ảnh bằng chứng (bước 3 ở mục *Ảnh bằng chứng*).
 8. **DỪNG.** Gửi người dùng: đường dẫn file nháp, bảng tóm tắt `Nxx | tiêu đề | new/comment | FE/BE | TC`, danh sách ảnh bằng chứng đã vẽ (đường dẫn đầy đủ, để tham khảo), danh sách BLOCKED, danh sách `[ẢNH KHÔNG KHỚP]`. Chờ câu trả lời "Duyệt", "Duyệt trừ Nxx" hoặc yêu cầu sửa.
 
+### TC bảo mật (Module `SEC`, kết quả từ `sec_checks.mjs`)
+- **Một mã danh mục NG là một bug**, kể cả khi nhiều mã nằm chung một TC (actual liệt kê sẵn từng mã). Lỗi header áp dụng toàn site thì 1 bug cho mỗi header, không tách theo URL.
+- Bug ghi thêm: mức độ của danh mục (`05_Security_Checklist.md`), nguồn `UB#` / `ASVS`, biện pháp khắc phục lấy từ danh mục, env đã chạy. Không ghi token, cookie phiên hay mật khẩu vào bug; nếu có trong ảnh thì che đi.
+- Người xử lý: header, cookie, CSP thường thuộc phía cấu hình server/FE proxy; phân quyền, validation thuộc BE. Không rõ thì ghi `[CẦN BỔ SUNG]` để người dùng chọn.
+
 ## Ảnh bằng chứng (áp dụng cho mọi bug, kể cả khi rule dự án không ghi)
 Ảnh gửi đi = ảnh gốc + khung đỏ đánh số quanh **từng** chỗ sai + cột trắng bên phải:
 - 3 dòng tiêu đề: `mã bug · môi trường · ngày` / `mã đặt chỗ hoặc mã item + tên` / `tài khoản · màn hình → thao tác`. Để `header.bug` là `"{{key}}"`: script tự điền mã issue thật khi tạo (bug mới), hoặc mã issue cũ (action comment).

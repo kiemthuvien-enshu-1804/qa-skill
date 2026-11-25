@@ -56,6 +56,16 @@
     "commentLanguage": "vi"
   },
 
+  "security": {
+    "_note": "Cho app-security-testcase + sec_checks.mjs (rule 05_Security_Checklist). Không bao giờ đưa production vào allowedEnvs",
+    "allowedEnvs": ["local", "test"],
+    "apiBase": "{url}",
+    "sessionCookies": ["token", "session"],
+    "mail": { "_note": "Tuỳ chọn: Mailpit/MailHog để đọc link reset/mời (mục RS*, RG*). Không có thì các mục đó là MANUAL", "type": "mailpit", "url": "http://localhost:8025" },
+    "accepted": { "_note": "Mục khách hàng đã chốt 'theo đặc tả / chấp nhận rủi ro' → không sinh TC. Dạng mã: lý do — người quyết định, ngày", "RS08": "<ví dụ: theo đặc tả — phía Nhật, 2026-11-20>" },
+    "previousReport": "<tuỳ chọn: đường dẫn báo cáo chẩn đoán bảo mật lần trước>"
+  },
+
   "review": {
     "_note": "Người chốt câu hỏi spec / lệch tài liệu-mockup, ghi trong test case và bug",
     "specOwner": "<tên>",
