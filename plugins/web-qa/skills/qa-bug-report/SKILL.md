@@ -87,7 +87,7 @@ Tracker là một trang claude.ai (Artifact) dùng chung cho team: xem bug, đ�
    - **Share** → chọn **Anyone with the link** (mọi người có link), cho phép tương tác. Khi đó ai mở link cũng sửa bug, comment và đổi trạng thái được.
    - **Copy link** → mở 1 bug bất kỳ, bấm "Copy link", dán link chia sẻ vào ô được hỏi. Tracker dùng link này để tạo link riêng từng bug (`…#ABC-012`).
 - Tracker đã có thì không tạo mới. Một Tracker chứa được nhiều dự án (mỗi dự án 1 `bugPrefix`).
-- Tracker tạo từ mẫu cũ (chưa có nút **Sửa**): publish lại `tracker/index.html` từ mẫu mới vào đúng `tracker.url` khi người dùng yêu cầu. Dữ liệu bug, comment, ảnh vẫn giữ nguyên.
+- Tracker tạo từ mẫu cũ (chưa có nút **Sửa** / ảnh trong comment): publish lại `tracker/index.html` từ mẫu mới vào đúng `tracker.url` khi người dùng yêu cầu. Dữ liệu bug, comment, ảnh vẫn giữ nguyên.
 
 ### Sửa bug trên Tracker
 Mở bug → **Sửa**. Các trường sửa được: tiêu đề, trang, nhóm, mức độ, kiểm bằng, browser, width, môi trường, loại, element, mong đợi / thực tế / cách tái hiện. Ảnh: thêm ảnh mới, hoặc bỏ chọn ảnh cũ để gỡ khỏi bug.
@@ -95,12 +95,15 @@ Mở bug → **Sửa**. Các trường sửa được: tiêu đề, trang, nhóm
 - Mỗi lần lưu ghi 1 dòng "Sửa bug: <các trường>" vào **Trao đổi** (ai sửa, lúc nào), nên vẫn biết ai đã sửa gì.
 - Bug đã sửa trên Tracker sẽ không bị Import đè, vì Import bỏ qua `key` đã có. Bug tự động mà dev đã sửa nội dung vẫn được `compare_runs.py` verify theo `key`/`check`.
 
+### Comment kèm ảnh
+Ô comment trong chi tiết bug nhận ảnh/GIF: dán ảnh chụp màn hình (Ctrl+V), kéo thả file, hoặc bấm **📎 Đính kèm ảnh**. Ảnh chờ gửi hiện bên dưới ô (✕ để bỏ). Gửi được comment chỉ có ảnh; "Comment + fixed" cũng gửi kèm ảnh. Bấm ảnh trong Trao đổi để xem lớn.
+
 ### 3b. Đưa bug lên
 - Thường dùng: mở Tracker → Import → chọn `bugs.json` cùng toàn bộ ảnh trong `upload/`. Tracker tự gán mã `<bugPrefix>-001…`, bỏ qua bug trùng `key`.
 - Session có tool Artifact/ArtifactData: ghi trực tiếp `bugs/{key}` (schema dưới), ảnh upload bằng Artifact `asset: true`.
 - Bỏ bug đã đưa lên: bug chưa có comment/đổi trạng thái thì xoá được; bug đã có trao đổi (dev comment, đổi status) thì **không xoá** — chuyển `status: closed` kèm comment lý do (vd "Web hiển thị đúng dữ liệu CMS, không phải bug web").
 
 Schema `bugs/{key}`: `key, code, project, page, path, url, title, group, type, severity (high|medium|low), viewports[], browsers[], env, element, prop, expected, actual, steps, figma{fileKey,nodeId,url}, screenshots[assetId], source (auto|chrome|manual), check, run, status (open|in-progress|fixed|wontfix|reopened|verified|closed), commentCount, createdAt, updatedAt`
-Comment: `bugs/{key}/comments/{id}`: `text, by, byName, at, kind (comment|status), from, to`.
+Comment: `bugs/{key}/comments/{id}`: `text, by, byName, at, kind (comment|status|edit), from, to, fields[], images[assetId]`.
 
 4. Báo người dùng số bug theo nhóm, kèm link Tracker. Checklist chỉ ghi NG, không ghi mã bug (`qa-checklist-excel`).

@@ -122,7 +122,17 @@ main{padding-block:4px 48px}
 .sec-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
 .thread{display:flex;flex-direction:column;gap:10px}
 .cmt{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px}
-.cmt img{width:28px;height:28px;border-radius:50%}
+.cmt > img{width:28px;height:28px;border-radius:50%}
+.cshots{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.cshots button{padding:0;border:1px solid var(--line);border-radius:var(--r);background:var(--sunk);cursor:zoom-in;line-height:0}
+.cshots img{width:120px;height:80px;object-fit:cover;border-radius:var(--r)}
+.pend{display:flex;flex-wrap:wrap;gap:8px}
+.pend:empty{display:none}
+.pend div{position:relative;line-height:0}
+.pend img{width:88px;height:60px;object-fit:cover;border:1px solid var(--line);border-radius:var(--r);background:var(--sunk)}
+.pend button{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:11px;line-height:1;padding:0}
+.compose.drop textarea{outline:2px dashed var(--accent,#2457c5);outline-offset:2px}
+.attach{margin-right:auto;cursor:pointer}
 .cmt .who{font-size:12.5px;color:var(--muted)}.cmt .who b{color:var(--fg);font-weight:600}
 .cmt .txt{white-space:pre-wrap;overflow-wrap:anywhere}
 .cmt.sys .txt{color:var(--muted);font-size:13px}
@@ -442,14 +452,53 @@ function renderSheet(b){
       b.steps? h("div",{},h("p",{class:"sec-title"},"Cách tái hiện"),h("div",{style:"white-space:pre-wrap"},b.steps)):null,
       shots.length? h("div",{},h("p",{class:"sec-title"},"Ảnh"),h("div",{class:"shots"},...shots.map((id,i)=>h("button",{type:"button",title:"Bấm để xem ảnh lớn","aria-label":`Xem ảnh ${i+1} của ${b.code||"bug"} cỡ lớn`,onclick:()=>openLightbox(shots,i,b.code)},h("img",{src:"/_blob/"+id,alt:"Ảnh bug "+(b.code||""),loading:"lazy",onerror:function(){ this.alt='Ảnh không tải được'; }}))))):null,
       h("div",{},h("p",{class:"sec-title"},"Trao đổi"),h("div",{class:"thread",id:"thread"})),
-      state.canWrite? h("div",{class:"compose"},
-        h("textarea",{id:"cmtText",placeholder:"Comment cho QA / dev… (dev: ghi rõ đã sửa gì, commit/branch nếu có)"}),
+      state.canWrite? h("div",{class:"compose",
+          ondragover:e=>{ if(assets&&[...e.dataTransfer.types].includes("Files")){ e.preventDefault(); e.currentTarget.classList.add("drop"); } },
+          ondragleave:e=>e.currentTarget.classList.remove("drop"),
+          ondrop:e=>{ e.currentTarget.classList.remove("drop"); if(!assets) return; e.preventDefault(); addDraftFiles(b,e.dataTransfer.files); }},
+        h("textarea",{id:"cmtText",placeholder:"Comment cho QA / dev… (dev: ghi rõ đã sửa gì, commit/branch nếu có)"+(assets?" · Dán ảnh (Ctrl+V) hoặc kéo thả ảnh vào đây":""),
+          oninput:e=>{ draftOf(b).text=e.target.value; },
+          onpaste:e=>{ if(!assets) return; const fs=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith("image/"));
+            if(!fs.length) return; if(!e.clipboardData.types.includes("text/plain")) e.preventDefault(); addDraftFiles(b,fs); }}),
+        h("div",{class:"pend",id:"cmtShots"}),
         h("div",{class:"actions"},
+          assets? h("label",{class:"btn attach",title:"Đính kèm ảnh / GIF"},"📎 Đính kèm ảnh",
+            h("input",{type:"file",accept:"image/*",multiple:true,hidden:true,onchange:e=>{ addDraftFiles(b,e.target.files); e.target.value=""; }})) : null,
           h("button",{class:"btn",type:"button",onclick:()=>sendComment(b,"fixed")},"Comment + fixed"),
           h("button",{class:"btn primary",type:"button",onclick:()=>sendComment(b)},"Gửi comment"))) : h("p",{class:"note"},"Bạn đang xem ở quyền chỉ đọc. Nhờ chủ tracker chia sẻ quyền Contributor để sửa bug, đổi trạng thái và comment."))
   );
+  if(state.canWrite){ const d=draftOf(b); $("#cmtText").value=d.text; renderDraft(b); }
   renderThread();
 }
+/* bản nháp comment (chữ + ảnh chờ gửi) giữ qua các lần vẽ lại sheet */
+let draft={id:null,text:"",files:[]};
+function draftOf(b){ if(draft.id!==b._id){ draft.files.forEach(x=>URL.revokeObjectURL(x.url)); draft={id:b._id,text:"",files:[]}; } return draft; }
+function addDraftFiles(b,list){
+  const d=draftOf(b);
+  for(const f of list||[]){
+    if(!f.type.startsWith("image/")){ toast(f.name+": chỉ đính kèm ảnh / GIF"); continue; }
+    if(f.size>15*1024*1024){ toast(f.name+": ảnh quá 15MB"); continue; }
+    const name=f.name&&f.name!=="image.png"? f.name : `paste-${Date.now()}-${d.files.length+1}.${(f.type.split("/")[1]||"png").replace("jpeg","jpg")}`;
+    d.files.push({file:f,name,url:URL.createObjectURL(f)});
+  }
+  renderDraft(b);
+}
+function renderDraft(b){
+  const box=$("#cmtShots"); if(!box) return;
+  box.replaceChildren(...draftOf(b).files.map((x,i)=>h("div",{},h("img",{src:x.url,alt:x.name,title:x.name}),
+    h("button",{type:"button","aria-label":"Bỏ ảnh "+x.name,onclick:()=>{ URL.revokeObjectURL(x.url); draft.files.splice(i,1); renderDraft(b); }},"✕"))));
+}
+async function uploadDraft(){
+  const ids=[];
+  for(const x of draft.files){
+    const f=x.file.name===x.name? x.file : new File([x.file],x.name,{type:x.file.type});
+    const r=await assets.upload(f,{type:f.type||"image/png"}).catch(()=>null);
+    if(!r){ toast("Ảnh "+x.name+" không tải lên được"); throw Object.assign(new Error("upload"),{code:"upload"}); }
+    ids.push(r.id);
+  }
+  return ids;
+}
+function clearDraft(){ draft.files.forEach(x=>URL.revokeObjectURL(x.url)); draft.text=""; draft.files=[]; const t=$("#cmtText"); if(t) t.value=""; const s=$("#cmtShots"); if(s) s.replaceChildren(); }
 function kv(k,v){ if(v==null||v==="") return null; return [h("dt",{},k),h("dd",{},v)]; }
 async function renderThread(){
   const t=$("#thread"); if(!t) return;
@@ -464,30 +513,39 @@ async function renderThread(){
       h("div",{},h("div",{class:"who"},h("b",{},name)," · "+fmtDate(c.at)),
         sys? h("div",{class:"txt"},"Đổi trạng thái: ",pill(c.from||"open")," → ",pill(c.to), c.text?"\n"+c.text:"")
           : c.kind==="edit"? h("div",{class:"txt",style:"color:var(--muted);font-size:13px"},"Sửa bug: "+(c.fields||[]).map(f=>FIELD_VI[f]||f).join(", ")+(c.text?"\n"+c.text:""))
-          : h("div",{class:"txt"},c.text)));
+          : c.text? h("div",{class:"txt"},c.text) : null,
+        (c.images||[]).length? h("div",{class:"cshots"},...c.images.map((id,i)=>h("button",{type:"button",title:"Bấm để xem ảnh lớn","aria-label":`Xem ảnh ${i+1} trong comment`,onclick:()=>openLightbox(c.images,i,"Comment")},
+          h("img",{src:"/_blob/"+id,alt:"Ảnh trong comment",loading:"lazy",onerror:function(){ this.alt='Ảnh không tải được'; }})))) : null));
   }));
 }
 let busy=false;
-async function setStatus(b,to,note){
-  const from=b.status||"open"; if(from===to && !note) return; if(busy) return; busy=true;
+async function setStatus(b,to,note,images){
+  const from=b.status||"open"; if(from===to && !note && !(images||[]).length) return; if(busy) return; busy=true;
   try{
     await db.doc("bugs/"+b._id).update({status:to,updatedAt:nowIso()});
-    await db.collection(`bugs/${b._id}/comments`).add({kind:"status",from,to,text:note||"",by:state.me,at:nowIso()});
+    const c={kind:"status",from,to,text:note||"",by:state.me,at:nowIso()}; if((images||[]).length) c.images=images;
+    await db.collection(`bugs/${b._id}/comments`).add(c);
     await db.doc("bugs/"+b._id).update({commentCount:(b.commentCount||0)+1});
-    toast(`${b.code||"Bug"}: ${SMAP[to][1]}`);
-  }catch(e){ toast(e.code==="invalid_argument"?"Bạn không có quyền đổi trạng thái.":"Lưu không được, thử lại."); }
+    toast(`${b.code||"Bug"}: ${SMAP[to][1]}`); return true;
+  }catch(e){ toast(e.code==="invalid_argument"?"Bạn không có quyền đổi trạng thái.":"Lưu không được, thử lại."); return false; }
   finally{ busy=false; }
 }
 async function sendComment(b,thenStatus){
   const ta=$("#cmtText"); const text=ta.value.trim();
-  if(thenStatus){ await setStatus(b,thenStatus,text); ta.value=""; return; }
-  if(!text||busy) return; busy=true;
+  if(busy) return;
+  if(!thenStatus && !text && !draft.files.length) return;
+  const btns=[...document.querySelectorAll(".compose .actions button")]; btns.forEach(x=>x.disabled=true);
+  let images=[];
   try{
-    await db.collection(`bugs/${b._id}/comments`).add({kind:"comment",text,by:state.me,at:nowIso()});
+    if(draft.files.length){ busy=true; toast("Đang tải ảnh lên…"); try{ images=await uploadDraft(); } finally{ busy=false; } }
+    if(thenStatus){ if(await setStatus(b,thenStatus,text,images)) clearDraft(); return; }
+    busy=true;
+    const c={kind:"comment",text,by:state.me,at:nowIso()}; if(images.length) c.images=images;
+    await db.collection(`bugs/${b._id}/comments`).add(c);
     await db.doc("bugs/"+b._id).update({commentCount:(b.commentCount||0)+1,updatedAt:nowIso()});
-    ta.value=""; toast("Đã gửi comment");
-  }catch(e){ toast(e.code==="invalid_argument"?"Bạn không có quyền comment.":"Gửi không được, thử lại."); }
-  finally{ busy=false; }
+    clearDraft(); toast("Đã gửi comment");
+  }catch(e){ if(e.code!=="upload") toast(e.code==="invalid_argument"?"Bạn không có quyền comment.":"Gửi không được, thử lại."); }
+  finally{ busy=false; document.querySelectorAll(".compose .actions button").forEach(x=>x.disabled=false); }
 }
 async function copyLink(b){
   const base=state.settings.shareUrl;
