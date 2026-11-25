@@ -15,12 +15,12 @@ const R = (rules, src, auto = 'HTTP') => `Rule: ${rules} | Nguồn: 05_Security_
 const CASES = [
   { id: 'TC-SEC-COMMON-01', name: 'Header bảo mật của trang HTML công khai', f: 'SEC-HDR', p: 'P3', pre: 'security.pages.public đã cấu hình (vd trang login)',
     steps: '1. GET security.pages.public (không đăng nhập), không theo redirect\n2. Đọc response header',
-    exp: '1. Status 200 (hoặc 3xx của trang login)\n2. CSP có default-src/script-src, không *, có frame-ancestors none/self; HSTS max-age ≥ 31536000 (env HTTPS); X-Content-Type-Options: nosniff; X-Frame-Options DENY/SAMEORIGIN; không có X-Powered-By, Server không ghi phiên bản [Baseline]',
-    rm: R('HDR01, HDR02, HDR03, HDR04, HDR05, HDR08', 'UB#2,3,4,22,24') },
+    exp: '1. Status 200 (hoặc 3xx của trang login)\n2. CSP có default-src/script-src, không *, có frame-ancestors none/self; HSTS max-age ≥ 31536000 (env HTTPS); X-Content-Type-Options: nosniff; X-Frame-Options DENY/SAMEORIGIN; không có X-Powered-By, Server không ghi phiên bản; Referrer-Policy no-referrer/same-origin/strict-origin(-when-cross-origin); HTML không nạp tài nguyên http:// (env HTTPS) [Baseline]',
+    rm: R('HDR01, HDR02, HDR03, HDR04, HDR05, HDR08, HDR11, HDR13', 'UB#2,3,4,22,24') },
   { id: 'TC-SEC-COMMON-02', name: 'Header bảo mật của trang HTML sau đăng nhập', f: 'SEC-HDR', p: 'P2', pre: 'security.account đăng nhập được; security.pages.authed đã cấu hình',
     steps: '1. Đăng nhập bằng API (security.login) với security.account\n2. GET security.pages.authed\n3. Đọc response header',
     exp: '1. Đăng nhập thành công\n2. Status 200\n3. Như TC-SEC-COMMON-01 và thêm Cache-Control chứa no-store [Baseline]',
-    rm: R('HDR01, HDR02, HDR04, HDR05, HDR06', 'UB#2,3,7,22,24') },
+    rm: R('HDR01, HDR02, HDR04, HDR05, HDR06, HDR11, HDR13', 'UB#2,3,7,22,24') },
   { id: 'TC-SEC-COMMON-03', name: 'Header của API JSON sau đăng nhập', f: 'SEC-HDR', p: 'P2', pre: 'security.me (API trả thông tin user đang đăng nhập) đã cấu hình',
     steps: '1. Đăng nhập bằng API với security.account\n2. GET security.me\n3. Đọc response header',
     exp: '1. Đăng nhập thành công\n2. Status 200, Content-Type application/json\n3. X-Content-Type-Options: nosniff; Cache-Control chứa no-store; không có X-Powered-By / phiên bản Server [Baseline]',
@@ -77,12 +77,33 @@ const CASES = [
     steps: '1. Đăng nhập sai mật khẩu threshold lần với security.lockoutAccount\n2. Đăng nhập sai thêm 1 lần\n3. Đăng nhập đúng mật khẩu',
     exp: '1. Bị từ chối\n2. Bị từ chối do khóa (429/423 hoặc message khóa)\n3. Vẫn bị từ chối trong thời gian khóa [Baseline]',
     rm: R('AU03', 'UB#25') },
+  // 17–21: bổ sung theo WebApp_Security_Test_Cases.xlsx. Vẫn chạy TRƯỚC TC-SEC-COMMON-16 (16 khóa tài khoản nên luôn chạy cuối).
+  { id: 'TC-SEC-COMMON-17', name: 'Không lộ file cấu hình, backup, log, thư mục và công cụ debug qua web', f: 'SEC-EX', p: 'P1', pre: 'Env trong security.allowedEnvs. Đường dẫn riêng của dự án (nếu có) thêm ở security.exposurePaths',
+    steps: '1. Không đăng nhập, GET một đường dẫn không tồn tại để lấy trang fallback\n2. GET lần lượt danh sách dò: /.env*, /.git/HEAD, /.git/config, /.DS_Store, file backup (.bak, .sql, .zip), file log, /uploads/ /storage/ /static/…, công cụ debug (Debugbar, Telescope, Horizon, Actuator, server-status, pprof, Nuxt DevTools, Symfony Profiler) trên env.url và security.apiBase\n3. So nội dung với chữ ký của từng loại file',
+    exp: '1. Có response\n2. Mọi đường dẫn trả 403/404 hoặc trang fallback, không trả nội dung file\n3. Không đường dẫn nào khớp chữ ký (biến môi trường, repo git, dump SQL, "Index of", trang debug) [Baseline]',
+    rm: R('EX01, EX02, EX04', 'xlsx INFO-003,004,005,007,009') },
+  { id: 'TC-SEC-COMMON-18', name: 'Không công khai source map của JavaScript', f: 'SEC-EX', p: 'P3', pre: 'security.pages.public đã cấu hình',
+    steps: '1. GET security.pages.public, lấy các <script src> cùng origin (tối đa 6)\n2. Với từng file JS: đọc sourceMappingURL, nếu không có thì thử <file>.js.map\n3. GET file map',
+    exp: '1. Có script\n2. Không có sourceMappingURL dạng data: nhúng sẵn\n3. 403/404, không trả JSON có "sources"/"mappings" [Baseline]',
+    rm: R('EX03', 'xlsx INFO-010') },
+  { id: 'TC-SEC-COMMON-19', name: 'Tắt method TRACE / TRACK', f: 'SEC-HDR', p: 'P3', pre: 'security.pages.public đã cấu hình; security.me (tuỳ chọn)',
+    steps: '1. Gửi TRACE và TRACK tới security.pages.public\n2. Gửi TRACE tới security.me (env.url và security.apiBase)',
+    exp: '1. 405/501/400/403/404, không phản hồi lại nội dung request\n2. Như bước 1 [Baseline]',
+    rm: R('HDR12', 'xlsx ADV-009, API-009') },
+  { id: 'TC-SEC-COMMON-20', name: 'Đổi session ID khi đăng nhập (chống session fixation)', f: 'SEC-SS', p: 'P2', pre: 'security.sessionCookies, security.pages.public đã cấu hình',
+    steps: '1. Xóa cookie, GET security.pages.public (và trang login), ghi lại cookie phiên trước đăng nhập\n2. Đặt cookie phiên bằng giá trị tự chọn (qa-fixed-…)\n3. Đăng nhập bằng API với security.account\n4. Đọc cookie phiên sau đăng nhập',
+    exp: '1. Ghi nhận được (không có cookie phiên trước đăng nhập → OK)\n2. Đã đặt\n3. Đăng nhập thành công\n4. Giá trị cookie phiên khác giá trị trước đăng nhập và khác giá trị tự đặt [Baseline]',
+    rm: R('SS01', 'xlsx AUTH-010, SES-004') },
+  { id: 'TC-SEC-COMMON-21', name: 'Token / cookie phiên bị sửa bị từ chối', f: 'SEC-SS', p: 'P1', pre: 'security.me đã cấu hình; đăng nhập trả JWT (login.tokenPath) hoặc cookie phiên',
+    steps: '1. Đăng nhập bằng API với security.account, GET security.me (mốc 200)\n2. JWT: gửi lại security.me với từng biến thể — sửa payload giữ chữ ký, alg: none, chữ ký sai, exp đã qua\n3. Cookie phiên: thay giá trị cookie bằng từng biến thể (JWT như bước 2; giá trị khác: đổi 1 ký tự, cắt nửa, tự đặt) rồi GET security.me',
+    exp: '1. Status 200\n2. Mọi biến thể trả 401/403 (hoặc chuyển về login), không trả dữ liệu\n3. Như bước 2 [Baseline]',
+    rm: R('SS02, AZ05', 'xlsx API-002,003,004,005, SES-010') },
 ];
 
 const args = parseArgs();
 if (args.csv) {
   const head = ['Test Case ID', 'Test Case Name', 'Feature ID', 'Feature Name', 'Module', 'Priority', 'Pre-Condition', 'Steps', 'Expected Result', 'Actual Result', 'Status', 'Date Tested', 'Tested By', 'Remarks'];
-  const FN = { 'SEC-HDR': 'Response header', 'SEC-CK': 'Cookie và phiên', 'SEC-AU': 'Xác thực', 'SEC-RS': 'Reset mật khẩu', 'SEC-AZ': 'Phân quyền', 'SEC-IN': 'Kiểm tra input' };
+  const FN = { 'SEC-HDR': 'Response header', 'SEC-CK': 'Cookie và phiên', 'SEC-AU': 'Xác thực', 'SEC-RS': 'Reset mật khẩu', 'SEC-AZ': 'Phân quyền', 'SEC-IN': 'Kiểm tra input', 'SEC-EX': 'Lộ thông tin', 'SEC-SS': 'Phiên đăng nhập' };
   const rows = CASES.map((c) => ({ 'Test Case ID': c.id, 'Test Case Name': c.name, 'Feature ID': c.f, 'Feature Name': FN[c.f], Module: MOD, Priority: c.p, 'Pre-Condition': c.pre, Steps: c.steps, 'Expected Result': c.exp, Remarks: c.rm }));
   fs.writeFileSync(args.csv, toCsv(head, rows));
   console.log(`Đã ghi ${rows.length} TC → ${args.csv}`);
@@ -102,12 +123,12 @@ defineRun({ module: 'SEC_Common', app: loadConfig().security?.app || 'admin' }, 
 
   add('TC-SEC-COMMON-01', async (t, id) => {
     const res = await sec.fetch(t, need(t, S.pages?.public, 'pages.public'));
-    return sec.report(t, T(t, id), sec.checkHeaders(res, ['HDR01', 'HDR02', 'HDR03', 'HDR04', 'HDR05', 'HDR08']), { request: res.summary });
+    return sec.report(t, T(t, id), sec.checkHeaders(res, ['HDR01', 'HDR02', 'HDR03', 'HDR04', 'HDR05', 'HDR08', 'HDR11', 'HDR13']), { request: res.summary });
   });
   add('TC-SEC-COMMON-02', async (t, id) => {
     const page = need(t, S.pages?.authed, 'pages.authed'); const L = await login(t);
     const res = await sec.fetch(t, page, { token: L.token });
-    const rows = sec.checkHeaders(res, ['HDR01', 'HDR02', 'HDR04', 'HDR05', 'HDR06']);
+    const rows = sec.checkHeaders(res, ['HDR01', 'HDR02', 'HDR04', 'HDR05', 'HDR06', 'HDR11', 'HDR13']);
     if (res.status >= 300) rows.unshift({ code: '-', item: 'Status trang sau đăng nhập', expected: '200', actual: String(res.status), ok: null });
     return sec.report(t, T(t, id), rows, { request: res.summary });
   });
@@ -199,6 +220,77 @@ defineRun({ module: 'SEC_Common', app: loadConfig().security?.app || 'admin' }, 
     const over = st.slice(cap);
     return sec.report(t, T(t, id), [{ code: 'RS06', item: `Gửi ${cap + 2} lần (ngưỡng ${cap})`, expected: 'Các lần vượt ngưỡng bị từ chối (4xx)', actual: st.join(', '), ok: over.every((s) => s >= 400) }]);
   });
+  const apiOrigin = (t) => (S.apiBase ? S.apiBase.replace('{url}', t.env.url) : t.env.url);
+  const sessRe = () => (S.sessionCookies || []).map((n) => new RegExp(n, 'i'));
+  const isSess = (name) => sessRe().some((re) => re.test(name));
+
+  add('TC-SEC-COMMON-17', async (t, id) => {
+    const rows = await sec.checkExposure(t, { extra: S.exposurePaths || [] });
+    return sec.report(t, T(t, id), rows);
+  });
+  add('TC-SEC-COMMON-18', async (t, id) => {
+    const res = await sec.fetch(t, need(t, S.pages?.public, 'pages.public'));
+    return sec.report(t, T(t, id), await sec.checkSourceMaps(t, res.text, res.url), { request: res.summary });
+  });
+  add('TC-SEC-COMMON-19', async (t, id) => {
+    const pub = need(t, S.pages?.public, 'pages.public');
+    const targets = [[t.env.url + pub, 'TRACE'], [t.env.url + pub, 'TRACK']];
+    if (S.me && !/<[^>]*>/.test(S.me)) for (const o of new Set([t.env.url, apiOrigin(t)])) targets.push([o + S.me, 'TRACE']);
+    const rows = [];
+    for (const [url, method] of targets) {
+      let res;
+      try { res = await sec.fetch(t, url, { method, headers: { 'X-QA-Trace': 'qa-trace-probe' } }); }
+      catch (e) { rows.push({ code: 'HDR12', item: `${method} ${url.replace(t.env.url, '')}`, expected: '405 | 501 | 4xx', actual: `Kết nối bị từ chối (${String(e.message).split('\n')[0].slice(0, 60)})`, ok: true }); continue; }
+      const echo = /qa-trace-probe/i.test(res.text) || /^TRACE\s/m.test(res.text);
+      rows.push({ code: 'HDR12', item: `${method} ${url.replace(t.env.url, '')}`, expected: '405 | 501 | 4xx, không phản hồi lại request', actual: `${res.status}${echo ? ' · phản hồi lại header request' : ''}`, ok: !(res.status >= 200 && res.status < 300) && !echo });
+    }
+    return sec.report(t, T(t, id), rows);
+  });
+  add('TC-SEC-COMMON-20', async (t, id) => {
+    const pub = need(t, S.pages?.public, 'pages.public'); acct(t);
+    await t.ctx.clearCookies();
+    await sec.fetch(t, pub, { maxRedirects: 5 });
+    const loginPage = t.cfg.apps?.[S.app || 'admin']?.login?.path;
+    if (loginPage && !loginPage.includes('{')) await sec.fetch(t, loginPage, { maxRedirects: 5 });
+    const pre = (await t.ctx.cookies()).filter((c) => isSess(c.name));
+    const planted = pre.map((c) => ({ ...c, value: `qa-fixed-${Date.now()}` }));
+    if (planted.length) await t.ctx.addCookies(planted);
+    const L = await login(t);
+    const post = (await t.ctx.cookies()).filter((c) => isSess(c.name));
+    if (!pre.length) {
+      return sec.report(t, T(t, id), [{ code: 'SS01', item: 'Cookie phiên trước đăng nhập', expected: 'Không có, hoặc đổi giá trị sau đăng nhập', actual: `Không có cookie phiên trước đăng nhập — sau đăng nhập: ${post.map((c) => c.name).join(', ') || (L.token ? 'dùng Bearer token' : 'không có')}`, ok: true }]);
+    }
+    const rows = pre.map((c, i) => {
+      const after = post.find((x) => x.name === c.name);
+      const same = after && (after.value === c.value || after.value === planted[i].value);
+      return { code: 'SS01', item: `${c.name}: trước / tự đặt / sau đăng nhập`, expected: 'Giá trị sau đăng nhập khác cả 2 giá trị trước', actual: after ? `${same ? 'GIỮ NGUYÊN' : 'Đã đổi'} (${after.value === planted[i].value ? 'nhận giá trị tự đặt' : 'giá trị mới'})` : 'Cookie bị xóa sau đăng nhập (dùng tên khác)', ok: !same };
+    });
+    return sec.report(t, T(t, id), rows);
+  });
+  add('TC-SEC-COMMON-21', async (t, id) => {
+    const me = need(t, S.me, 'me'); const L = await login(t);
+    const saved = await t.ctx.cookies();
+    const base = await sec.fetch(t, me, { token: L.token });
+    if (base.status !== 200) t.fail(`GET ${me} trả ${base.status} sau khi đăng nhập — kiểm security.me`);
+    const rejected = (s) => s === 401 || s === 403 || (s >= 300 && s < 400);
+    const rows = [];
+    const tryIt = async (label, { token, cookies }) => {
+      await t.ctx.clearCookies(); if (cookies) await t.ctx.addCookies(cookies);
+      const r = await sec.fetch(t, me, { token });
+      rows.push({ code: 'SS02', item: label, expected: '401 | 403 | chuyển về login', actual: `${r.status} · ${r.text.replace(/\s+/g, ' ').slice(0, 70)}`, ok: rejected(r.status) });
+    };
+    const sessCookies = saved.filter((c) => isSess(c.name));
+    if (L.token && sec.isJwt(L.token)) for (const v of sec.jwtVariants(L.token)) await tryIt(`Bearer: ${v.label}`, { token: v.value, cookies: saved.filter((c) => !isSess(c.name)) });
+    else if (L.token) await tryIt('Bearer: đổi 1 ký tự cuối', { token: L.token.slice(0, -1) + (L.token.endsWith('a') ? 'b' : 'a'), cookies: saved.filter((c) => !isSess(c.name)) });
+    for (const c of sessCookies) {
+      const vs = sec.isJwt(c.value) ? sec.jwtVariants(c.value) : sec.opaqueVariants(c.value);
+      for (const v of vs) await tryIt(`Cookie ${c.name}: ${v.label}`, { cookies: saved.map((x) => (x.name === c.name ? { ...x, value: v.value } : x)) });
+    }
+    await t.ctx.clearCookies(); await t.ctx.addCookies(saved);
+    if (!rows.length) t.na('Không có JWT trong response đăng nhập và không có cookie khớp security.sessionCookies');
+    return sec.report(t, T(t, id), rows, { request: base.summary });
+  });
+
   add('TC-SEC-COMMON-16', async (t, id) => {
     const acc = need(t, S.lockoutAccount, 'lockoutAccount'), n = S.lockout?.threshold || 5;
     const st = [];

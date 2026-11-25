@@ -55,6 +55,15 @@ const HEADER_RULES = {
   HDR07: { item: 'X-Download-Options / Content-Disposition', expected: 'noopen + attachment', test: (h) => [/noopen/i.test(h['x-download-options'] || '') && /attachment/i.test(h['content-disposition'] || ''), `X-Download-Options: ${h['x-download-options'] || '(không có)'} / Content-Disposition: ${cut(h['content-disposition'] || '(không có)', 60)}`] },
   HDR08: { item: 'X-Powered-By / Server', expected: 'Không có X-Powered-By; Server không ghi phiên bản', test: (h) => {
     const xp = h['x-powered-by'], sv = h.server || ''; return [!xp && !/\d+\.\d+/.test(sv), `X-Powered-By: ${xp || '(không có)'} / Server: ${sv || '(không có)'}`]; } },
+  HDR11: { item: 'Referrer-Policy', expected: 'no-referrer | same-origin | strict-origin | strict-origin-when-cross-origin', test: (h) => {
+    const v = h['referrer-policy']; if (!v) return [false, '(không có)'];
+    const last = v.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).pop();   // trình duyệt dùng giá trị hợp lệ cuối cùng
+    return [['no-referrer', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin'].includes(last), v]; } },
+  HDR13: { item: 'Mixed content (tài nguyên http:// trên trang https://)', expected: 'Không có', test: (h, res) => {
+    if (!/^https:/.test(res.url)) return [null, 'Bỏ qua: env không dùng HTTPS'];
+    const re = /<(script|img|iframe|link|source|video|audio|embed|object|form)\b[^>]*?\s(src|href|data|action)\s*=\s*["']?(http:\/\/[^"'\s>]+)/gi;
+    const hits = [...String(res.text || '').matchAll(re)].filter((m) => !(m[1].toLowerCase() === 'link' && /rel\s*=\s*["']?(canonical|alternate)/i.test(m[0]))).map((m) => `<${m[1]}> ${m[3]}`);
+    return [!hits.length, hits.length ? cut(hits.slice(0, 4).join(' · '), 220) : 'Không có (chỉ quét HTML trả về, chưa gồm tài nguyên JS tải sau)']; } },
 };
 
 /** Kiểm header theo mã HDRxx. res = kết quả fetch(). */
@@ -188,11 +197,114 @@ export function sameResponse(a, b) {
   return a.status === b.status && norm(a.text) === norm(b.text);
 }
 
+/* ---------- EX: lộ file / thư mục / công cụ debug qua web ---------- */
+const ENV_SIG = /^\s*(export\s+)?[A-Z][A-Z0-9_]*\s*=/m;
+const SQL_SIG = /CREATE TABLE|INSERT INTO|mysqldump|PostgreSQL database dump/i;
+const ZIP_SIG = { test: (s) => s.startsWith('PK\u0003\u0004') };
+const LIST_SIG = /<title>\s*Index of\b|Directory listing for|\[To Parent Directory\]|<h1>\s*Index of\b/i;
+/** Danh sách đường dẫn dò (chỉ GET, đọc chữ ký nội dung — không khai thác). Thêm của dự án: security.exposurePaths [{path, code?, sig?}] */
+export const EXPOSURE = [
+  ...['/.env', '/.env.local', '/.env.production', '/.env.backup'].map((path) => ({ code: 'EX01', path, sig: ENV_SIG, what: 'biến môi trường' })),
+  { code: 'EX01', path: '/.git/HEAD', sig: /^ref:\s*refs\//m, what: 'repo git' },
+  { code: 'EX01', path: '/.git/config', sig: /\[core\]/, what: 'repo git' },
+  { code: 'EX01', path: '/.svn/wc.db', sig: /SQLite format/, what: 'repo svn' },
+  { code: 'EX01', path: '/.DS_Store', sig: /Bud1/, what: 'danh sách file' },
+  { code: 'EX01', path: '/docker-compose.yml', sig: /^\s*services:/m, what: 'cấu hình hạ tầng' },
+  { code: 'EX01', path: '/web.config', sig: /<configuration/i, what: 'cấu hình server' },
+  { code: 'EX01', path: '/phpinfo.php', sig: /PHP Version|phpinfo\(\)/i, what: 'phpinfo' },
+  ...['/index.php.bak', '/config.php.bak', '/wp-config.php.bak', '/config.php~'].map((path) => ({ code: 'EX01', path, sig: /<\?php/, what: 'mã nguồn backup' })),
+  ...['/backup.sql', '/dump.sql', '/db.sql', '/database.sql'].map((path) => ({ code: 'EX01', path, sig: SQL_SIG, what: 'dump DB' })),
+  ...['/backup.zip', '/site.zip', '/www.zip', '/backup.tar.gz'].map((path) => ({ code: 'EX01', path, sig: path.endsWith('.zip') ? ZIP_SIG : { test: (s) => s.startsWith('\u001f\u008b') || s.startsWith('\u001f�') }, what: 'file nén backup' })),
+  ...['/uploads/', '/upload/', '/storage/', '/files/', '/images/', '/img/', '/static/', '/assets/', '/backup/', '/logs/'].map((path) => ({ code: 'EX02', path, sig: LIST_SIG, what: 'directory listing' })),
+  ...['/storage/logs/laravel.log', '/logs/error.log', '/error.log', '/debug.log'].map((path) => ({ code: 'EX01', path, sig: /\[\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}|Stack trace|Exception/i, what: 'file log' })),
+  { code: 'EX04', path: '/_debugbar/open', sig: /"__meta"|debugbar/i, what: 'Laravel Debugbar' },
+  { code: 'EX04', path: '/telescope/requests', sig: /<title>[^<]*Telescope/i, what: 'Laravel Telescope' },
+  { code: 'EX04', path: '/horizon/dashboard', sig: /<title>[^<]*Horizon/i, what: 'Laravel Horizon' },
+  { code: 'EX04', path: '/__clockwork/latest', sig: /"controller"|"responseStatus"/, what: 'Clockwork' },
+  { code: 'EX04', path: '/actuator', sig: /"_links"\s*:/, what: 'Spring Actuator' },
+  { code: 'EX04', path: '/actuator/env', sig: /propertySources|activeProfiles/, what: 'Spring Actuator env' },
+  { code: 'EX04', path: '/server-status', sig: /Apache Server Status/i, what: 'Apache server-status' },
+  { code: 'EX04', path: '/debug/pprof/', sig: /pprof/i, what: 'Go pprof' },
+  { code: 'EX04', path: '/__nuxt_devtools__/client/', sig: /devtools/i, what: 'Nuxt DevTools' },
+  { code: 'EX04', path: '/_profiler/latest', sig: /Symfony Profiler/i, what: 'Symfony Profiler' },
+];
+const normBody = (s) => String(s || '').replace(/\s+/g, ' ').replace(/[0-9a-f]{8,}/gi, '#').slice(0, 4000);
+
+/** Dò EX01/EX02/EX04 trên các origin (env.url + apiBase nếu khác). Lộ = status 2xx + nội dung khớp chữ ký + khác trang fallback của SPA. */
+export async function checkExposure(t, { bases, extra = [] } = {}) {
+  const list = [...EXPOSURE, ...extra.map((x) => ({ code: x.code || 'EX01', path: x.path, sig: x.sig ? new RegExp(x.sig, 'im') : { test: () => true }, what: x.what || 'đường dẫn của dự án' }))];
+  const origins = bases || [...new Set([t.env.url, t.cfg.security?.apiBase ? t.cfg.security.apiBase.replace('{url}', t.env.url) : t.env.url])];
+  const rows = [];
+  for (const base of origins) {
+    const fallback = await fetch(t, `${base}/__qa_not_found_${Date.now()}`);
+    const tried = {}, hits = [];
+    for (const x of list) {
+      const res = await fetch(t, base + x.path);
+      (tried[x.code] ||= []).push(x.path);
+      const exposed = res.status >= 200 && res.status < 300 && x.sig.test(res.text) && normBody(res.text) !== normBody(fallback.text);
+      if (exposed) hits.push({ code: x.code, item: `${base.replace(t.env.url, '') || '(env)'}${x.path} — ${x.what}`, expected: '403 | 404, không trả nội dung', actual: `${res.status} · ${cut(res.text.replace(/\s+/g, ' '), 70)}`, ok: false });
+    }
+    for (const [code, paths] of Object.entries(tried)) {
+      if (!hits.some((h) => h.code === code)) rows.push({ code, item: `${base === t.env.url ? '' : base + ' · '}Đã dò ${paths.length} đường dẫn`, expected: 'Không lộ', actual: `Không lộ (${cut(paths.join(' '), 140)})`, ok: true });
+    }
+    rows.push(...hits);
+  }
+  return rows;
+}
+
+/** EX03: source map của JS công khai. html = nội dung trang (fetch().text), pageUrl để ghép đường dẫn tương đối. */
+export async function checkSourceMaps(t, html, pageUrl, { max = 6 } = {}) {
+  const origin = new URL(pageUrl).origin;
+  const srcs = [...String(html).matchAll(/<script\b[^>]*\ssrc\s*=\s*["']?([^"'\s>]+)/gi), ...String(html).matchAll(/<link\b[^>]*rel\s*=\s*["']?modulepreload[^>]*href\s*=\s*["']?([^"'\s>]+)/gi)]
+    .map((m) => { try { return new URL(m[1], pageUrl).href; } catch { return null; } })
+    .filter((u) => u && u.startsWith(origin));
+  const uniq = [...new Set(srcs)].slice(0, max);
+  if (!uniq.length) return [{ code: 'EX03', item: 'Script cùng origin trên trang', expected: 'Có script để kiểm', actual: 'Không thấy <script src> cùng origin trong HTML', ok: null }];
+  const rows = [];
+  for (const js of uniq) {
+    const r = await fetch(t, js);
+    const m = /\/\/[#@]\s*sourceMappingURL\s*=\s*(\S+)\s*$/m.exec(r.text);
+    const mapUrl = m && !m[1].startsWith('data:') ? new URL(m[1], js).href : js + '.map';
+    const inline = m && m[1].startsWith('data:');
+    const mr = inline ? null : await fetch(t, mapUrl);
+    const exposed = inline || (mr.status === 200 && /"sources"\s*:/.test(mr.text) && /"mappings"\s*:/.test(mr.text));
+    rows.push({ code: 'EX03', item: js.replace(origin, ''), expected: 'Không có source map công khai', actual: inline ? 'Source map nhúng trong file (data:)' : `${mapUrl.replace(origin, '')} → ${mr.status}${exposed ? ' · có "sources" (lộ mã nguồn)' : ''}`, ok: !exposed });
+  }
+  return rows;
+}
+
+/* ---------- SS02: token / cookie phiên bị sửa ---------- */
+const b64u = { dec: (s) => JSON.parse(Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')), enc: (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_') };
+export const isJwt = (s) => { const p = String(s || '').split('.'); if (p.length !== 3) return false; try { return !!b64u.dec(p[0]).alg; } catch { return false; } };
+/** Biến thể của JWT: sửa payload giữ chữ ký, alg none, chữ ký sai. Không cần khóa ký — chỉ kiểm server có xác minh chữ ký hay không. */
+export function jwtVariants(token) {
+  const [h, p, s] = token.split('.');
+  const head = b64u.dec(h), body = b64u.dec(p);
+  const now = Math.floor(Date.now() / 1000);
+  const changed = { ...body, exp: (body.exp || now) + 365 * 24 * 3600 };
+  for (const k of ['role', 'roles', 'isAdmin', 'is_admin']) if (k in body) changed[k] = Array.isArray(body[k]) ? [...body[k], 'admin'] : typeof body[k] === 'boolean' ? true : 'admin';
+  const flip = (x) => x.slice(0, -2) + (x.slice(-2) === 'AA' ? 'BB' : 'AA');
+  return [
+    { label: 'Sửa payload (exp +1 năm, role), giữ chữ ký cũ', value: `${h}.${b64u.enc(changed)}.${s}` },
+    { label: 'alg: none, bỏ chữ ký', value: `${b64u.enc({ ...head, alg: 'none' })}.${p}.` },
+    { label: 'Chữ ký sai', value: `${h}.${p}.${flip(s)}` },
+    { label: 'exp đã qua, giữ chữ ký cũ', value: `${h}.${b64u.enc({ ...body, exp: now - 3600 })}.${s}` },
+  ];
+}
+/** Biến thể của giá trị cookie phiên không phải JWT (giá trị mờ / đã ký). */
+export function opaqueVariants(v) {
+  const flip = (x) => x.slice(0, -1) + (x.slice(-1) === 'a' ? 'b' : 'a');
+  return [{ label: 'Đổi 1 ký tự cuối', value: flip(v) }, { label: 'Cắt còn nửa', value: v.slice(0, Math.max(1, Math.floor(v.length / 2))) }, { label: 'Giá trị tự đặt', value: 'qa-forged-session-0000' }];
+}
+
 /** Payload dò chuẩn (rule 05). */
 export const PAYLOADS = {
   int: [2147483648, -1, 1.5, 'abc'],
   xss: `<'"xss0"'>`,
   sqli: [`'`, `' OR '1'='1`, `1;--`],
+  sqliBoolean: [`' AND '1'='1`, `' AND '1'='2`],          // so 2 response: khác nhau = có dấu hiệu blind SQLi
+  xssEncoded: ['%3C%27%22xss0%22%27%3E', '&lt;xss0&gt;', '\\u003cxss0\\u003e'],
+  traversal: ['../../etc/passwd', '..%2F..%2Fetc%2Fpasswd', '..%5c..%5cwindows%5cwin.ini', '%2e%2e%2f%2e%2e%2f'],
   long: 'a'.repeat(10000),
   csvFormula: '=1+1',
 };

@@ -29,7 +29,7 @@ node "$S/doctor.mjs"            # chạy trước mỗi phiên, và khi người
 4. `app-bug-backlog`: TC FAIL → `BUGREPORT/<M>_Bug_Drafts_<YYYYMMDD>.md` → **DỪNG chờ duyệt** → tạo issue/comment Backlog
 5. `app-verify-bug`: bug dev đã fix → kiểm build → retest + TC liên quan + hồi quy → nháp → **DỪNG chờ duyệt** → Backlog + TestRail
 
-**Bảo mật** (1 lần cho cả webapp, không theo chức năng): `app-security-testcase`. Gồm bộ common 16 TC cố định (`scripts/sec_common.run.mjs`, chỉ cần điền khối `security` trong config) và TC riêng của dự án (`SEC_Rieng_TestCase.csv`, chạy với helper `scripts/sec_checks.mjs`), theo danh mục `templates/rules/05_Security_Checklist.md`. Chỉ chạy trên env thuộc `security.allowedEnvs`.
+**Bảo mật** (1 lần cho cả webapp, không theo chức năng): `app-security-testcase`. Gồm bộ common 21 TC cố định (`scripts/sec_common.run.mjs`, chỉ cần điền khối `security` trong config) và TC riêng của dự án (`SEC_Rieng_TestCase.csv`, chạy với helper `scripts/sec_checks.mjs`), theo danh mục `templates/rules/05_Security_Checklist.md`. Chỉ chạy trên env thuộc `security.allowedEnvs`.
 
 Người dùng có thể gọi từng bước riêng. Khi được yêu cầu "QA chức năng X" thì đi từ bước 1, mỗi bước báo kết quả rồi mới sang bước sau.
 

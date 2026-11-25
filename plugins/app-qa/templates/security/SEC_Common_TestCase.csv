@@ -1,12 +1,12 @@
 ﻿Test Case ID,Test Case Name,Feature ID,Feature Name,Module,Priority,Pre-Condition,Steps,Expected Result,Actual Result,Status,Date Tested,Tested By,Remarks
 TC-SEC-COMMON-01,Header bảo mật của trang HTML công khai,SEC-HDR,Response header,SEC - Bảo mật (Common),P3,security.pages.public đã cấu hình (vd trang login),"1. GET security.pages.public (không đăng nhập), không theo redirect
 2. Đọc response header","1. Status 200 (hoặc 3xx của trang login)
-2. CSP có default-src/script-src, không *, có frame-ancestors none/self; HSTS max-age ≥ 31536000 (env HTTPS); X-Content-Type-Options: nosniff; X-Frame-Options DENY/SAMEORIGIN; không có X-Powered-By, Server không ghi phiên bản [Baseline]",,,,,"Rule: HDR01, HDR02, HDR03, HDR04, HDR05, HDR08 | Nguồn: 05_Security_Checklist (UB#2,3,4,22,24) | Tự động: HTTP | Bộ: Common"
+2. CSP có default-src/script-src, không *, có frame-ancestors none/self; HSTS max-age ≥ 31536000 (env HTTPS); X-Content-Type-Options: nosniff; X-Frame-Options DENY/SAMEORIGIN; không có X-Powered-By, Server không ghi phiên bản; Referrer-Policy no-referrer/same-origin/strict-origin(-when-cross-origin); HTML không nạp tài nguyên http:// (env HTTPS) [Baseline]",,,,,"Rule: HDR01, HDR02, HDR03, HDR04, HDR05, HDR08, HDR11, HDR13 | Nguồn: 05_Security_Checklist (UB#2,3,4,22,24) | Tự động: HTTP | Bộ: Common"
 TC-SEC-COMMON-02,Header bảo mật của trang HTML sau đăng nhập,SEC-HDR,Response header,SEC - Bảo mật (Common),P2,security.account đăng nhập được; security.pages.authed đã cấu hình,"1. Đăng nhập bằng API (security.login) với security.account
 2. GET security.pages.authed
 3. Đọc response header","1. Đăng nhập thành công
 2. Status 200
-3. Như TC-SEC-COMMON-01 và thêm Cache-Control chứa no-store [Baseline]",,,,,"Rule: HDR01, HDR02, HDR04, HDR05, HDR06 | Nguồn: 05_Security_Checklist (UB#2,3,7,22,24) | Tự động: HTTP | Bộ: Common"
+3. Như TC-SEC-COMMON-01 và thêm Cache-Control chứa no-store [Baseline]",,,,,"Rule: HDR01, HDR02, HDR04, HDR05, HDR06, HDR11, HDR13 | Nguồn: 05_Security_Checklist (UB#2,3,7,22,24) | Tự động: HTTP | Bộ: Common"
 TC-SEC-COMMON-03,Header của API JSON sau đăng nhập,SEC-HDR,Response header,SEC - Bảo mật (Common),P2,security.me (API trả thông tin user đang đăng nhập) đã cấu hình,"1. Đăng nhập bằng API với security.account
 2. GET security.me
 3. Đọc response header","1. Đăng nhập thành công
@@ -59,3 +59,28 @@ TC-SEC-COMMON-16,Khóa tài khoản khi đăng nhập sai liên tiếp,SEC-AU,X�
 3. Đăng nhập đúng mật khẩu","1. Bị từ chối
 2. Bị từ chối do khóa (429/423 hoặc message khóa)
 3. Vẫn bị từ chối trong thời gian khóa [Baseline]",,,,,Rule: AU03 | Nguồn: 05_Security_Checklist (UB#25) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-17,"Không lộ file cấu hình, backup, log, thư mục và công cụ debug qua web",SEC-EX,Lộ thông tin,SEC - Bảo mật (Common),P1,Env trong security.allowedEnvs. Đường dẫn riêng của dự án (nếu có) thêm ở security.exposurePaths,"1. Không đăng nhập, GET một đường dẫn không tồn tại để lấy trang fallback
+2. GET lần lượt danh sách dò: /.env*, /.git/HEAD, /.git/config, /.DS_Store, file backup (.bak, .sql, .zip), file log, /uploads/ /storage/ /static/…, công cụ debug (Debugbar, Telescope, Horizon, Actuator, server-status, pprof, Nuxt DevTools, Symfony Profiler) trên env.url và security.apiBase
+3. So nội dung với chữ ký của từng loại file","1. Có response
+2. Mọi đường dẫn trả 403/404 hoặc trang fallback, không trả nội dung file
+3. Không đường dẫn nào khớp chữ ký (biến môi trường, repo git, dump SQL, ""Index of"", trang debug) [Baseline]",,,,,"Rule: EX01, EX02, EX04 | Nguồn: 05_Security_Checklist (xlsx INFO-003,004,005,007,009) | Tự động: HTTP | Bộ: Common"
+TC-SEC-COMMON-18,Không công khai source map của JavaScript,SEC-EX,Lộ thông tin,SEC - Bảo mật (Common),P3,security.pages.public đã cấu hình,"1. GET security.pages.public, lấy các <script src> cùng origin (tối đa 6)
+2. Với từng file JS: đọc sourceMappingURL, nếu không có thì thử <file>.js.map
+3. GET file map","1. Có script
+2. Không có sourceMappingURL dạng data: nhúng sẵn
+3. 403/404, không trả JSON có ""sources""/""mappings"" [Baseline]",,,,,Rule: EX03 | Nguồn: 05_Security_Checklist (xlsx INFO-010) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-19,Tắt method TRACE / TRACK,SEC-HDR,Response header,SEC - Bảo mật (Common),P3,security.pages.public đã cấu hình; security.me (tuỳ chọn),"1. Gửi TRACE và TRACK tới security.pages.public
+2. Gửi TRACE tới security.me (env.url và security.apiBase)","1. 405/501/400/403/404, không phản hồi lại nội dung request
+2. Như bước 1 [Baseline]",,,,,"Rule: HDR12 | Nguồn: 05_Security_Checklist (xlsx ADV-009, API-009) | Tự động: HTTP | Bộ: Common"
+TC-SEC-COMMON-20,Đổi session ID khi đăng nhập (chống session fixation),SEC-SS,Phiên đăng nhập,SEC - Bảo mật (Common),P2,"security.sessionCookies, security.pages.public đã cấu hình","1. Xóa cookie, GET security.pages.public (và trang login), ghi lại cookie phiên trước đăng nhập
+2. Đặt cookie phiên bằng giá trị tự chọn (qa-fixed-…)
+3. Đăng nhập bằng API với security.account
+4. Đọc cookie phiên sau đăng nhập","1. Ghi nhận được (không có cookie phiên trước đăng nhập → OK)
+2. Đã đặt
+3. Đăng nhập thành công
+4. Giá trị cookie phiên khác giá trị trước đăng nhập và khác giá trị tự đặt [Baseline]",,,,,"Rule: SS01 | Nguồn: 05_Security_Checklist (xlsx AUTH-010, SES-004) | Tự động: HTTP | Bộ: Common"
+TC-SEC-COMMON-21,Token / cookie phiên bị sửa bị từ chối,SEC-SS,Phiên đăng nhập,SEC - Bảo mật (Common),P1,security.me đã cấu hình; đăng nhập trả JWT (login.tokenPath) hoặc cookie phiên,"1. Đăng nhập bằng API với security.account, GET security.me (mốc 200)
+2. JWT: gửi lại security.me với từng biến thể — sửa payload giữ chữ ký, alg: none, chữ ký sai, exp đã qua
+3. Cookie phiên: thay giá trị cookie bằng từng biến thể (JWT như bước 2; giá trị khác: đổi 1 ký tự, cắt nửa, tự đặt) rồi GET security.me","1. Status 200
+2. Mọi biến thể trả 401/403 (hoặc chuyển về login), không trả dữ liệu
+3. Như bước 2 [Baseline]",,,,,"Rule: SS02, AZ05 | Nguồn: 05_Security_Checklist (xlsx API-002,003,004,005, SES-010) | Tự động: HTTP | Bộ: Common"

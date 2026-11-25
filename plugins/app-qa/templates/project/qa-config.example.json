@@ -73,6 +73,7 @@
     "lockout": { "threshold": 5 },
     "maxSessionHours": 24,
     "apiBase": "{url}",
+    "exposurePaths": [{ "_note": "Tuỳ chọn (TC-SEC-COMMON-17): đường dẫn nhạy cảm riêng của dự án. sig = regex nội dung, bỏ trống = 2xx là lộ", "path": "<vd /admin/export.csv>", "sig": "", "what": "<mô tả>" }],
     "mail": { "_note": "Tuỳ chọn: Mailpit/MailHog để đọc link reset/mời (mục RS*, RG*). Không có thì các mục đó là MANUAL", "type": "mailpit", "url": "http://localhost:8025" },
     "accepted": { "_note": "Mục khách hàng đã chốt 'theo đặc tả / chấp nhận rủi ro' → bộ common báo '—' thay vì NG, TC riêng không sinh. Dạng mã: lý do — người quyết định, ngày", "RS08": "<ví dụ: theo đặc tả — phía Nhật, 2026-11-20>" },
     "previousReport": "<tuỳ chọn: đường dẫn báo cáo chẩn đoán bảo mật lần trước>"
