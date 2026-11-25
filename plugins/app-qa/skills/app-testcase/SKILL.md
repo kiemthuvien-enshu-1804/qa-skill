@@ -20,7 +20,7 @@ description: Thiết kế test case webapp theo hướng rủi ro từ tài li�
 Bước 1 trích rule và câu hỏi → Bước 2 chọn kỹ thuật → Bước 3 sinh TC, gộp và chống trùng → Bước 4 tự kiểm. Rule không có bước nào chưa cover thì giải thích lý do ở Phần D.
 
 ### Bảo mật trong phạm vi chức năng
-Header, cookie, login/reset, CSRF là phần chung của cả webapp, đã nằm trong bộ `SEC` của `app-security-testcase`. Bộ của chức năng **không test lại** các mục này (D1), chỉ ghi `Tham chiếu: TC-SEC-xxx`. Chỉ thêm TC khi chức năng có thành phần riêng, và lấy cách test + mong đợi theo danh mục `05_Security_Checklist.md`:
+Header, cookie, login/reset, CSRF là phần chung của cả webapp, đã nằm trong bộ common `TC-SEC-COMMON-xx` và bộ riêng `TC-SEC-xxx` của `app-security-testcase`. Bộ của chức năng **không test lại** các mục này (D1), chỉ ghi `Tham chiếu: TC-SEC-COMMON-xx` / `TC-SEC-xxx`. Chỉ thêm TC khi chức năng có thành phần riêng, và lấy cách test + mong đợi theo danh mục `05_Security_Checklist.md`:
 - Màn hình / API chỉ cho một số role → AZ02 (role thấp gọi thẳng API), cùng với case phân quyền G6.
 - Tài nguyên truy cập theo ID (`/xxx/:id`) → AZ03 (ID của user khác), AZ04 (tenant khác) nếu multi-tenant.
 - Field số / ID trong body → IN01 (`2147483648`, `-1`, `abc` → 400, không 500), gộp vào case validation negative.

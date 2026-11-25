@@ -1,101 +1,98 @@
 ---
 name: app-security-testcase
-description: Thiết kế bộ test case BẢO MẬT cho cả webapp (header, cookie, xác thực/mật khẩu, reset & mời người dùng, phân quyền/IDOR/tenant, input, upload, CSRF) theo danh mục chuẩn 05_Security_Checklist (rút từ báo cáo chẩn đoán UBsecure + OWASP ASVS) — khảo sát bề mặt tấn công từ đặc tả + code, chọn mục áp dụng, gộp theo S1–S5 — xuất SEC_TestDesign.md + SEC_TestCase.csv, rồi (khi được duyệt) import TestRail. Dùng khi được yêu cầu "test case security/bảo mật", "chuẩn bị trước chẩn đoán bảo mật", "kiểm lại các lỗi UBsecure". Chạy bằng app-run-test với helper sec_checks.mjs.
+description: Kiểm tra bảo mật webapp theo danh mục 05_Security_Checklist (rút từ báo cáo chẩn đoán UBsecure + OWASP ASVS), chia 2 phần — (1) BỘ COMMON cố định 16 TC (header, cookie, logout, thời hạn phiên, API chưa đăng nhập, lộ tài khoản, khóa tài khoản, giới hạn mail reset, lộ lỗi nội bộ) chạy ngay bằng sec_common.run.mjs sau khi điền khối security trong qa-config; (2) TC RIÊNG của dự án (phân quyền/IDOR/tenant, chính sách mật khẩu, reset/mời, upload, input, CSRF) sinh thành SEC_Rieng_TestCase.csv. Dùng khi được yêu cầu "test bảo mật/security", "chuẩn bị trước chẩn đoán bảo mật", "kiểm lại các lỗi UBsecure".
 ---
 
-# Thiết kế test case bảo mật (rule 05 + rule 01)
+# Kiểm tra bảo mật (rule 05)
 
-**Đọc trước:**
-1. `${CLAUDE_PLUGIN_ROOT}/templates/rules/05_Security_Checklist.md` (danh mục, mức độ, phạm vi an toàn, quy tắc gộp S1–S5). Nếu dự án có `<docs.repo>/<docs.testing>/RULES/05_*.md` thì **rule của dự án được ưu tiên**.
-2. `RULES/01_*.md` của dự án (hoặc template của plugin): định dạng Phần A–F, priority, giới hạn 6 bước, checklist tự kiểm. Skill này chỉ nêu phần khác so với `app-testcase`.
+**Đọc trước:** `${CLAUDE_PLUGIN_ROOT}/templates/rules/05_Security_Checklist.md` (danh mục, phạm vi an toàn, phần Common / TC riêng, quy tắc gộp S1–S5). Nếu dự án có `RULES/05_*.md` thì **rule của dự án được ưu tiên**. Phần TC riêng theo định dạng của `RULES/01_*.md` (Phần A–F, priority, tối đa 6 bước).
 
-Bộ này làm **1 lần cho cả webapp** (Module `SEC`), không theo từng chức năng. Khi tài liệu hoặc code thay đổi lớn (thêm role, thêm upload, đổi cách login) thì cập nhật bộ này.
+```bash
+S="${CLAUDE_PLUGIN_ROOT}/scripts"; T="<docs.repo>/<docs.testing>"
+```
 
-## 1. Thu thập đầu vào (hỏi người dùng những mục còn thiếu, đừng đoán)
-- **`qa-config.json → security`** (xem `templates/project/qa-config.example.json`). Thiếu khối này thì đề xuất nội dung cho người dùng điền:
-  - `allowedEnvs`: env được phép chạy (mặc định `["local","test"]`). **Không bao giờ có production.**
-  - `apiBase`, `sessionCookies` (regex tên cookie phiên), `mail` (Mailpit/MailHog để đọc link reset, nếu có).
-  - `accepted`: mục khách hàng đã chốt "theo đặc tả / chấp nhận rủi ro", dạng `{ "RS08": "Theo đặc tả — phía Nhật 2026-11-20" }`.
-  - `previousReport`: đường dẫn báo cáo chẩn đoán trước (nếu có) để ưu tiên kiểm lại các mục đã bị chỉ ra.
-- **Yêu cầu bảo mật trong đặc tả**: mục yêu cầu phi chức năng, phạm vi truy cập theo quyền, quy ước chung, danh sách message. Ghi version/ngày như `app-testcase`.
-- **Tài khoản**: ≥ 1 tài khoản cho mỗi role trong `accounts`. Có multi-tenant thì cần 2 tenant (cho AZ04). Thiếu thì ghi `[CẦN BỔ SUNG]` và đưa vào `app-testdata`.
+Làm **1 lần cho cả webapp**. Chạy lại khi có thay đổi lớn (thêm role, đổi cách login, thêm upload) và trước mỗi đợt chẩn đoán.
 
-## 2. Khảo sát bề mặt tấn công (Phần 0 của TestDesign)
-Đọc code BE/FE **khi người dùng cho phép** (chỉ đọc, không sửa; không in giá trị trong `.env`). Lập bảng, mỗi dòng ghi nguồn `file:dòng` hoặc mục tài liệu:
+## Bước 1. Điền khối `security` trong `qa-config.json`
+Mẫu ở `templates/project/qa-config.example.json`. Lấy thông tin từ đặc tả, và từ code BE/FE nếu người dùng cho phép (chỉ đọc; không in giá trị trong `.env`). Mục nào không biết thì hỏi người dùng, không đoán.
+- `allowedEnvs`: mặc định `["local","test"]`. **Không bao giờ có production.**
+- `account`: tài khoản dùng chung cho các TC cần đăng nhập. `lockoutAccount`: **tài khoản riêng**, vì TC-SEC-COMMON-16 sẽ khóa nó.
+- `login`, `logout`, `me`, `authApis`, `reset`, `pages`, `download`: các đường dẫn **mà trình duyệt gọi**.
+  - Với kiến trúc BFF (FE server route gọi BE, vd Nuxt `server/api/**`), đây là route của FE.
+  - `login.tokenPath` chỉ điền khi API trả access token trong JSON.
+- `sessionCookies`: regex tên cookie phiên.
+- `lockout.threshold`, `reset.mailCap`, `maxSessionHours`: lấy theo đặc tả. Đặc tả không có thì giữ mặc định và ghi câu hỏi Qxx.
+- `accepted`: mục khách hàng đã chốt "theo đặc tả / chấp nhận rủi ro". Dạng `"RS08": "lý do — người quyết định, ngày"`.
+- MFA/OTP qua email: runner không tự nhập OTP. Tắt MFA cho tài khoản test trên env test, hoặc đánh MANUAL các TC cần đăng nhập UI (chỉ TC-SEC-COMMON-08).
+
+## Bước 2. Bộ common (không thiết kế lại)
+```bash
+node "$S/sec_common.run.mjs" --csv "$T/TESTCASE/SEC_Common_TestCase.csv"      # chép CSV 16 TC vào dự án (để import TestRail)
+APPQA_ROOT="${CLAUDE_PLUGIN_ROOT}" node "$S/sec_common.run.mjs" --env <env> --out runs/$(date +%Y%m%d-%H%M)-SEC_Common [--only TC-SEC-COMMON-01,...]
+```
+- Mục chưa cấu hình → TC đó là NA, kèm lý do `Chưa cấu hình security.xxx`. Mục có trong `accepted` → hiển thị `—`, không tính NG.
+- Chạy **TC-SEC-COMMON-16 sau cùng** (thứ tự trong file đã đặt sẵn). Trên env dùng chung, báo dev trước vì `lockoutAccount` bị khóa và có mail reset được gửi.
+- Mở xem ảnh của mọi case FAIL. Ảnh là bảng "Mã – Mục – Mong đợi – Thực tế – OK/NG". Nếu FAIL do cấu hình sai (vd `me` trả 404) thì sửa config rồi chạy lại case đó, không sửa kết quả.
+- Ghi TestRail và log bug như mọi module (`app-run-test` mục 4, `app-bug-backlog`).
+
+## Bước 3. TC riêng của dự án
+### 3.1 Khảo sát (Phần 0 của `SEC_Rieng_TestDesign.md`)
+Lập bảng, mỗi dòng ghi nguồn `file:dòng` hoặc mục tài liệu:
 
 | Hạng mục | Cần ghi |
 |---|---|
-| Cách xác thực | Token/session, lưu ở cookie (tên + thuộc tính) hay storage, thời hạn, logout có hủy phía server không, MFA |
-| Thông tin quyền phía client | Cookie/storage nào chứa role/permission/tenant; FE guard có tin vào giá trị đó không |
 | Role và tenant | Danh sách role, guard/middleware phía BE, cách cô lập tenant |
-| Nhóm API | Nhóm theo guard + role (admin-only, user, public), API theo ID tài nguyên (ứng viên IDOR) |
-| Mật khẩu / reset / mời | Rule validation, endpoint, thời hạn token, dùng 1 lần, hủy session |
-| Chống brute force | Throttler, khóa tài khoản, CAPTCHA, ngưỡng |
-| Header | helmet / nitro routeRules / nginx; giá trị CSP, HSTS… |
-| Upload / download / import / export | Endpoint, kiểm tra extension/MIME/kích thước, cách trả file |
-| Validation | ValidationPipe/whitelist, parse số nguyên, nơi dùng raw SQL, nơi render HTML từ input (`v-html`, `innerHTML`) |
+| Nhóm API | Nhóm theo guard + role (admin-only, user, public); API theo ID tài nguyên (ứng viên IDOR) |
+| Thông tin quyền phía client | Cookie/storage chứa role; FE guard có tin vào giá trị đó không |
+| Mật khẩu, reset, mời | Rule validation, endpoint, thời hạn token, dùng 1 lần, hủy session |
+| Upload / import / export | Endpoint, kiểm tra extension/MIME/kích thước, cách trả file |
+| Input | Cách validation (schema/pipe), giới hạn số nguyên, raw SQL, nơi render HTML từ input |
 
-Lưu ý theo kiến trúc:
-- **BFF / proxy** (FE server route gọi BE bằng Bearer, ví dụ Nuxt `server/api/**`): test phân quyền và input ở **cả 2 lớp**. Lớp 1 qua route của FE bằng cookie của trình duyệt. Lớp 2 gọi thẳng BE (`security.apiBase`) bằng access token của role thấp, vì BE phải tự chặn, không dựa vào FE. Header phải kiểm trên response của FE (là thứ trình duyệt nhận); header của BE chỉ kiểm khi BE công khai ra internet.
-- **Cookie phiên được mã hóa / ký** (h3 `useSession`, iron-session…): không sửa được nội dung, nên AZ01 chuyển thành "sửa giá trị cookie → bị từ chối / 401". Thông tin quyền khi đó nằm trong token phía server, nên trọng tâm là AZ02–AZ04.
-- **MFA / OTP qua email**: runner không tự nhập OTP. Cách xử lý: tắt MFA trên env test cho tài khoản test (ghi rõ trong Phạm vi), hoặc đọc OTP từ `security.mail` (Mailpit), hoặc đánh MANUAL. Khi đã tắt MFA thì vẫn phải có TC riêng kiểm cơ chế OTP (thời hạn, số lần sai, dùng 1 lần) trên tài khoản bật MFA.
-- **Khóa tài khoản theo email** (AU03): dùng tài khoản test riêng cho TC này và chạy cuối cùng, để không khóa tài khoản các TC khác đang dùng.
+- **BFF**: test phân quyền và input ở cả 2 lớp. Lớp 1 là route FE dùng cookie. Lớp 2 gọi thẳng BE (`security.apiBase`) bằng access token của role thấp, vì BE phải tự chặn, không dựa vào FE.
+- **Cookie phiên đã mã hóa / ký** (h3 `useSession`, iron-session…): AZ01 chỉ còn là "sửa cookie → bị từ chối"; trọng tâm là AZ02–AZ04.
+- Phát hiện khi đọc code **không phải kết quả test**. Chỉ dùng để chọn mục và viết Steps; kết quả lấy từ lúc chạy.
 
-Phát hiện từ code (vd `secure` chỉ bật ở production, cookie user JSON không HttpOnly) **không phải kết quả test**. Chỉ ghi ở Phần 0 để chọn mục và viết Steps; kết quả thật phải lấy từ lúc chạy trên env.
+### 3.2 Chọn mục (Phần A)
+Mỗi mã thuộc nhóm "TC riêng" của danh mục là một dòng: `| Mã | Mô tả | Nguồn (UB#/ASVS + mục đặc tả) | Áp dụng / N/A — lý do / Chấp nhận — lý do | Mong đợi [Spec]/[Baseline] |`. Đặc tả không quy định giá trị thì dùng [Baseline] và tạo Qxx (Phần B) để `specOwner` chốt.
 
-## 3. Chọn mục và viết Phần A
-- Duyệt **toàn bộ** danh mục. Mỗi mục là một dòng ở Phần A: `| Mã | Mô tả | Nguồn (UB#/ASVS + mục đặc tả) | Áp dụng? | Mong đợi ([Spec] / [Baseline]) |`.
-- Không áp dụng (vd không có upload → UP*; xác thực bằng header Bearer không dùng cookie → CS01) thì ghi `N/A — <lý do>`.
-- Mục có trong `security.accepted` thì ghi `Chấp nhận — <lý do, người quyết định>`, không sinh TC.
-- Đặc tả không quy định giá trị (thời hạn link, ngưỡng khóa, độ dài mật khẩu) thì dùng [Baseline] của danh mục và tạo `Qxx` ở Phần B để `specOwner` chốt. Không tự đặt giá trị khác.
+### 3.3 Sinh TC (Phần C)
+- `TESTCASE/SEC_Rieng_TestCase.csv`: header **y hệt** template trong `RULES/`, UTF-8 có BOM, ghi bằng `toCsv` của `lib.mjs`.
+- `Test Case ID` `TC-SEC-001`…; `Module` `SEC - Bảo mật (Riêng)`; `Feature ID` theo nhóm (`SEC-AZ`, `SEC-AU`, `SEC-RS`, `SEC-IN`, `SEC-UP`, `SEC-CS`).
+- Gộp theo S3/S4: 1 TC cho mỗi nhóm API × role × đọc/ghi, liệt kê endpoint trong Steps. Thường 10–20 TC.
+- Steps ghi rõ endpoint, method, payload, tài khoản (TD-xx). Expected ghi status / message cụ thể, kèm [Spec] hoặc [Baseline].
+- Remarks: `Rule: AZ02, AZ03 | Nguồn: 05_Security_Checklist (ASVS V4) + <mục đặc tả> | Tự động: HTTP | Mức: Cao`.
+- Phần F: những gì cần công cụ hoặc bên chuyên môn (`npm audit`, cấu hình TLS, DoS, tấn công tổ hợp). Chỉ ghi lại, không sinh TC.
 
-## 4. Sinh TC (Phần C)
-- File `TESTCASE/SEC_Bao-mat_TestCase.csv`: header **y hệt** template CSV trong `RULES/`, UTF-8 có BOM, ghi bằng `toCsv` của `${CLAUDE_PLUGIN_ROOT}/scripts/lib.mjs`.
-- `Test Case ID`: `TC-SEC-001`…; `Module`: `SEC`; `Feature ID/Name`: nhóm (`SEC-HDR` Header, `SEC-CK` Cookie, `SEC-AU` Xác thực, `SEC-RS` Reset/Mời, `SEC-AZ` Phân quyền, `SEC-IN` Input, `SEC-UP` Upload, `SEC-CS` CSRF).
-- **Gộp theo S1–S5** của danh mục, ví dụ 1 TC cho header trang HTML, 1 TC cho header API JSON, 1 TC cho cookie phiên, mỗi nhóm API × role × đọc/ghi 1 TC. Mục tiêu khoảng 25–45 TC cho một webapp cỡ vừa.
-- Steps ghi rõ **endpoint, method, payload, tài khoản (TD-xx)**. Expected ghi **status code / giá trị header / message cụ thể**, kèm `[Spec]` hoặc `[Baseline]`. Tối đa 6 bước; nhiều endpoint thì liệt kê trong 1 bước.
-- Remarks: `Rule: HDR01, HDR02 | Nguồn: 05_Security_Checklist (UB#2,3) + <mục đặc tả> | Tự động: HTTP | Env: local,test`.
-  - Cột `Tự động` lấy từ danh mục: `MAIL` khi không có `security.mail` thì đổi thành `MANUAL`.
-  - Mức độ của danh mục ghi thêm `| Mức: Thấp` để dùng khi log bug.
-- Priority theo danh mục: AZ*, AU01–AU03, IN03 → P1; CK*, RS*, RG*, UP*, IN01/02/04/05, CS01, HDR06, HDR09 → P2; các HDR còn lại → P3.
-- **Phần F (ngoài phạm vi)**: các nội dung cần công cụ hoặc bên chuyên môn: quét lỗ hổng thư viện (`npm audit`, Dependabot), cấu hình TLS (SSL Labs), DoS, tấn công tổ hợp nhiều bước. Ghi để người dùng quyết định, không sinh TC.
-
-## 5. Tự kiểm bằng script (bắt buộc)
+### 3.4 Tự kiểm
 ```bash
-S="${CLAUDE_PLUGIN_ROOT}/scripts"; T="<docs.repo>/<docs.testing>"
-node "$S/tc_csv.mjs" check "$T/TESTCASE/SEC_Bao-mat_TestCase.csv" --template "$T/RULES/<template>.csv" --rules <mọi mã "Áp dụng" ở Phần A>
-node "$S/tc_csv.mjs" trace "$T/TESTCASE/SEC_Bao-mat_TestCase.csv"   # → Phần D
-node "$S/tc_csv.mjs" stats "$T/TESTCASE/SEC_Bao-mat_TestCase.csv"   # → Phần E
+node "$S/tc_csv.mjs" check "$T/TESTCASE/SEC_Rieng_TestCase.csv" --template "$T/RULES/<template>.csv" --rules <mọi mã "Áp dụng" ở Phần A>
+node "$S/tc_csv.mjs" trace "$T/TESTCASE/SEC_Rieng_TestCase.csv"
+node "$S/tc_csv.mjs" stats "$T/TESTCASE/SEC_Rieng_TestCase.csv"
 ```
 Thêm vào checklist của rule 01:
-6. Mục nào trong danh mục chưa có dòng ở Phần A?
-7. Có TC nào chạy trên env ngoài `security.allowedEnvs`, hoặc vượt "Phạm vi an toàn" (số request brute force, payload khai thác thật) không?
-8. Có Expected nào là kết luận rút ra từ đọc code thay vì quan sát được khi chạy không?
+- Mã "TC riêng" nào chưa có dòng ở Phần A?
+- Có TC nào vượt phạm vi an toàn không?
+- Có Expected nào rút ra từ đọc code thay vì quan sát được khi chạy không?
 
-## 6. Đầu ra
-- `TESTCASE/SEC_Bao-mat_TestDesign.md`: bảng thông tin, **0. Phạm vi + Bề mặt tấn công**, 1. Dữ liệu TD-xx (tài khoản theo role/tenant, tài nguyên của user khác), Phần A–F, RTM (đối chiếu thêm cột `UB#` nếu có `previousReport`).
-- `TESTCASE/SEC_Bao-mat_TestCase.csv`.
-- Import TestRail (chỉ khi người dùng yêu cầu): giống mục 5 của `app-testcase`, section `SEC - Bảo mật`.
-
-## 7. Chạy (chuyển sang `app-run-test`)
-File chạy `e2e/SEC.run.mjs` dùng runner như mọi module, cộng thêm helper:
+### 3.5 Chạy TC riêng
+File `e2e/SEC_Rieng.run.mjs` (copy `run_template.mjs`) dùng helper `sec_checks.mjs`:
 ```js
 const sec = await import(pathToFileURL(path.join(ROOT, 'scripts', 'sec_checks.mjs')).href);
-defineRun({ module: 'SEC_Bao-mat', app: 'admin' }, ({ tc }) => {
-  tc('TC-SEC-001', 'Header trang HTML', async (t) => {
-    const res = await sec.fetch(t, '/login');                                                    // 1. GET trang login
-    return sec.report(t, 'TC-SEC-001 Header trang HTML', sec.checkHeaders(res, ['HDR01', 'HDR02', 'HDR03', 'HDR04', 'HDR05', 'HDR08']), { request: res.summary });
-  });
-  tc('TC-SEC-010', 'Staff gọi API admin', async (t) => {
-    const rows = await sec.probe(t, [{ method: 'GET', path: '/api/admin/users' }, { method: 'DELETE', path: '/api/admin/users/1' }], { code: 'AZ02' });
-    return sec.report(t, 'TC-SEC-010 Staff gọi API admin', rows);
-  }, { account: 'staff_a' });
+tc('TC-SEC-003', 'Staff gọi thẳng API chỉ dành cho admin', async (t) => {
+  const { token } = await sec.apiLogin(t, 'staff_a');
+  const rows = await sec.probe(t, [
+    { method: 'GET', path: '/api/users', token },
+    { method: 'DELETE', path: '/api/users/1', token },
+  ], { code: 'AZ02' });                                   // api:true → security.apiBase (gọi thẳng BE)
+  return sec.report(t, 'TC-SEC-003 Staff gọi thẳng API admin', rows);
 });
 ```
-- `sec.fetch` / `sec.probe` dùng chung cookie của context đã login; `sec.guardEnv` chặn env ngoài `allowedEnvs`.
-- `sec.report` vẽ bảng "Mã – Mục – Mong đợi – Thực tế – OK/NG" để runner chụp làm evidence. Có NG thì TC là FAIL, và kết quả thực tế liệt kê đúng các mã lỗi.
-- Có sẵn: `checkHeaders`, `checkCors`, `checkCookies` (từ `res.setCookies` của response login), `checkClientStorage`, `tamperCookie` (AZ01), `probe`, `PAYLOADS`.
-- Khi log bug (`app-bug-backlog`): **mỗi mã danh mục là một bug**, kể cả khi nằm chung một TC. Bug ghi mức độ của danh mục, nguồn UB#/ASVS và biện pháp khắc phục trong danh mục. Lỗi header áp dụng toàn site thì gộp 1 bug cho mỗi header, không tách theo từng URL.
+Có sẵn: `apiLogin`, `creds`, `fetch`, `probe` (expect là mảng status hoặc hàm), `checkHeaders`, `checkCors`, `checkCookies`, `checkClientStorage`, `tamperCookie`, `fillBody`, `sameResponse`, `jwtLifetimeHours`, `PAYLOADS`, `report`.
+
+## Log bug
+Theo `app-bug-backlog`: **mỗi mã danh mục NG là một bug**. Bug ghi mức độ và biện pháp khắc phục lấy từ danh mục, nguồn UB#/ASVS, và env đã chạy.
 
 ## Báo cáo cho người dùng
-Đường dẫn 2 file; bảng `Áp dụng / N/A / Chấp nhận` theo nhóm; số TC (AUTO-HTTP / UI / MAIL / MANUAL); danh sách Qxx cần `specOwner` chốt; các điểm rủi ro rút ra khi khảo sát code mà cần ưu tiên chạy trước.
+- Bộ common: bảng PASS / FAIL / NA, danh sách FAIL kèm mã.
+- TC riêng: đường dẫn 2 file, số TC, danh sách Qxx cần chốt.
+- Các mục cấu hình còn thiếu, và các điểm rủi ro từ khảo sát cần ưu tiên chạy trước.

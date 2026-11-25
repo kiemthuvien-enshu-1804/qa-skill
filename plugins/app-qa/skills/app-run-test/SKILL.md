@@ -29,7 +29,7 @@ Với mỗi TC trong CSV, viết `tc(id, name, async (t) => {...}, { account })`
 - Bước Playwright không làm được (mail thật, OTP, kéo thả, đánh giá bằng mắt, thiết bị thật): `tc.manual(id, name, 'lý do')`.
 - Selector ưu tiên role/label/text như người dùng thấy. Không sửa code app để thêm selector.
 - Giữ file `e2e/` lại để verify và regression chạy y hệt.
-- **TC bảo mật** (Module `SEC`, hoặc TC có mã danh mục `HDR/CK/AU/RS/RG/AZ/IN/UP/CS` trong Remarks): dùng `scripts/sec_checks.mjs` (xem mục 7 của `app-security-testcase`). Kiểm header/cookie/status bằng `sec.fetch` / `sec.probe`, kết thúc bằng `sec.report(...)` để ảnh evidence là bảng OK/NG. Tuân thủ "Phạm vi an toàn" của rule 05: chỉ chạy env thuộc `security.allowedEnvs`, brute force tối đa ngưỡng + 2 request, chỉ dùng payload dò.
+- **TC bảo mật** (Module `SEC`, hoặc TC có mã danh mục `HDR/CK/AU/RS/RG/AZ/IN/UP/CS` trong Remarks): dùng `scripts/sec_checks.mjs` (xem bước 3.5 của `app-security-testcase`; bộ common thì chạy thẳng `scripts/sec_common.run.mjs`). Kiểm header/cookie/status bằng `sec.fetch` / `sec.probe`, kết thúc bằng `sec.report(...)` để ảnh evidence là bảng OK/NG. Tuân thủ "Phạm vi an toàn" của rule 05: chỉ chạy env thuộc `security.allowedEnvs`, brute force tối đa ngưỡng + 2 request, chỉ dùng payload dò.
 
 ## 3. Chạy
 ```bash

@@ -20,6 +20,16 @@ Danh mục chuẩn để sinh bộ test case bảo mật cho mỗi webapp, chạ
 5. File upload thử dùng nội dung vô hại (chuỗi text, ảnh 1x1). Xóa file đã upload sau khi test nếu chức năng cho phép.
 6. Môi trường dùng chung (`test`/staging): báo trước cho dev các test gây khóa tài khoản hoặc gửi nhiều mail.
 
+## Bộ common và TC riêng của dự án
+Danh mục chia làm 2 phần:
+
+| Phần | Mã | Cách dùng |
+|---|---|---|
+| **Bộ common** (cố định, giống nhau ở mọi webapp) | HDR01–HDR10, CK01–CK07, AU03, AU04, AU05, AZ05, RS01, RS06, IN04 | 16 TC `TC-SEC-COMMON-01…16` trong `templates/security/SEC_Common_TestCase.csv`. Chạy bằng `scripts/sec_common.run.mjs`, chỉ cần điền khối `security` trong `qa-config.json`. **Không thiết kế lại.** |
+| **TC riêng** (phụ thuộc role, endpoint, đặc tả của dự án) | AU01, AU02, AU06, AU07, AU08, RS02–RS05, RS07, RS08, RG01, RG02, AZ01–AZ04, AZ06, IN01–IN03, IN05–IN07, UP01–UP05, CS01 | Skill `app-security-testcase` sinh `SEC_Rieng_TestCase.csv` (thường 10–20 TC). Đây là nhóm có lỗi nặng nhất (phân quyền, IDOR, tenant), nên không được bỏ qua. |
+
+Sửa TC common: sửa mảng `CASES` trong `sec_common.run.mjs`, rồi chạy `--csv` để sinh lại CSV, để code chạy và CSV luôn khớp nhau.
+
 ---
 
 ## 1. HDR — Response header (áp dụng cho mọi webapp)

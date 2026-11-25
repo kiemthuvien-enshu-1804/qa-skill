@@ -1,0 +1,61 @@
+﻿Test Case ID,Test Case Name,Feature ID,Feature Name,Module,Priority,Pre-Condition,Steps,Expected Result,Actual Result,Status,Date Tested,Tested By,Remarks
+TC-SEC-COMMON-01,Header bảo mật của trang HTML công khai,SEC-HDR,Response header,SEC - Bảo mật (Common),P3,security.pages.public đã cấu hình (vd trang login),"1. GET security.pages.public (không đăng nhập), không theo redirect
+2. Đọc response header","1. Status 200 (hoặc 3xx của trang login)
+2. CSP có default-src/script-src, không *, có frame-ancestors none/self; HSTS max-age ≥ 31536000 (env HTTPS); X-Content-Type-Options: nosniff; X-Frame-Options DENY/SAMEORIGIN; không có X-Powered-By, Server không ghi phiên bản [Baseline]",,,,,"Rule: HDR01, HDR02, HDR03, HDR04, HDR05, HDR08 | Nguồn: 05_Security_Checklist (UB#2,3,4,22,24) | Tự động: HTTP | Bộ: Common"
+TC-SEC-COMMON-02,Header bảo mật của trang HTML sau đăng nhập,SEC-HDR,Response header,SEC - Bảo mật (Common),P2,security.account đăng nhập được; security.pages.authed đã cấu hình,"1. Đăng nhập bằng API (security.login) với security.account
+2. GET security.pages.authed
+3. Đọc response header","1. Đăng nhập thành công
+2. Status 200
+3. Như TC-SEC-COMMON-01 và thêm Cache-Control chứa no-store [Baseline]",,,,,"Rule: HDR01, HDR02, HDR04, HDR05, HDR06 | Nguồn: 05_Security_Checklist (UB#2,3,7,22,24) | Tự động: HTTP | Bộ: Common"
+TC-SEC-COMMON-03,Header của API JSON sau đăng nhập,SEC-HDR,Response header,SEC - Bảo mật (Common),P2,security.me (API trả thông tin user đang đăng nhập) đã cấu hình,"1. Đăng nhập bằng API với security.account
+2. GET security.me
+3. Đọc response header","1. Đăng nhập thành công
+2. Status 200, Content-Type application/json
+3. X-Content-Type-Options: nosniff; Cache-Control chứa no-store; không có X-Powered-By / phiên bản Server [Baseline]",,,,,"Rule: HDR04, HDR06, HDR08 | Nguồn: 05_Security_Checklist (UB#7,22) | Tự động: HTTP | Bộ: Common"
+TC-SEC-COMMON-04,Header của file tải về (export/download),SEC-HDR,Response header,SEC - Bảo mật (Common),P3,security.download đã cấu hình (không có chức năng tải file → NA),"1. Đăng nhập bằng API với security.account
+2. GET security.download
+3. Đọc response header","1. Đăng nhập thành công
+2. Status 200
+3. X-Download-Options: noopen; Content-Disposition: attachment [Baseline]",,,,,Rule: HDR07 | Nguồn: 05_Security_Checklist (UB#23) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-05,CORS với Origin lạ,SEC-HDR,Response header,SEC - Bảo mật (Common),P2,security.me đã cấu hình,"1. Đăng nhập bằng API với security.account
+2. GET security.me kèm header Origin: https://evil.example
+3. Đọc Access-Control-Allow-Origin / -Credentials","1. Đăng nhập thành công
+2. Có response
+3. Không phản chiếu https://evil.example, không trả * kèm Allow-Credentials: true [Baseline]",,,,,Rule: HDR09 | Nguồn: 05_Security_Checklist (ASVS V14) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-06,Chuyển HTTP sang HTTPS,SEC-HDR,Response header,SEC - Bảo mật (Common),P3,Env dùng HTTPS (env http như local → NA),"1. GET http://<host>/ của env, không theo redirect",1. Redirect 301/308 sang https://<host>/ [Baseline],,,,,Rule: HDR10 | Nguồn: 05_Security_Checklist (ASVS V9) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-07,Thuộc tính cookie phiên sau đăng nhập,SEC-CK,Cookie và phiên,SEC - Bảo mật (Common),P2,security.sessionCookies khớp tên cookie phiên của dự án,"1. Đăng nhập bằng API với security.account
+2. Đọc Set-Cookie của cookie phiên","1. Đăng nhập thành công
+2. HttpOnly; Secure (env HTTPS); SameSite Lax/Strict; tên có __Host- + Path=/ + không Domain; không có Max-Age/Expires [Baseline]",,,,,"Rule: CK01, CK02, CK03, CK04, CK05 | Nguồn: 05_Security_Checklist (UB#8,11) | Tự động: HTTP | Bộ: Common"
+TC-SEC-COMMON-08,Không lưu thông tin quyền ở nơi JS đọc/sửa được,SEC-CK,Cookie và phiên,SEC - Bảo mật (Common),P2,apps.<app>.login + security.account đăng nhập UI được (cần OTP → MANUAL),"1. Đăng nhập bằng màn hình login với security.account
+2. Đọc document.cookie, localStorage, sessionStorage","1. Vào được màn hình sau đăng nhập
+2. Không có role / permission / tenant / isAdmin ở cookie không HttpOnly hoặc storage [Baseline]",,,,,Rule: CK06 | Nguồn: 05_Security_Checklist (UB#12) | Tự động: UI | Bộ: Common
+TC-SEC-COMMON-09,Đăng xuất hủy phiên phía server,SEC-CK,Cookie và phiên,SEC - Bảo mật (Common),P1,"security.logout, security.me đã cấu hình","1. Đăng nhập bằng API với security.account, lưu cookie phiên / token
+2. GET security.me
+3. Gọi security.logout
+4. Gắn lại cookie / token đã lưu, GET security.me","1. Đăng nhập thành công
+2. Status 200
+3. Đăng xuất thành công (2xx/3xx)
+4. Status 401 (phiên cũ không còn dùng được) [Baseline]",,,,,Rule: CK07 | Nguồn: 05_Security_Checklist (ASVS V3) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-10,Thời hạn phiên đăng nhập,SEC-AU,Xác thực,SEC - Bảo mật (Common),P2,security.login.tokenPath (JWT) hoặc cookie phiên có Max-Age; security.maxSessionHours (mặc định 24),"1. Đăng nhập bằng API với security.account
+2. Đọc exp - iat của JWT, nếu không có thì Max-Age của cookie phiên","1. Đăng nhập thành công
+2. Thời hạn ≤ security.maxSessionHours giờ (theo đặc tả nếu có) [Baseline]",,,,,Rule: AU05 | Nguồn: 05_Security_Checklist (UB#11) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-11,API cần đăng nhập từ chối request không có phiên hợp lệ,SEC-AZ,Phân quyền,SEC - Bảo mật (Common),P1,"security.authApis liệt kê các API cần đăng nhập (GET, không đổi dữ liệu)","1. Không đăng nhập, GET từng API trong security.authApis
+2. GET lại kèm Authorization: Bearer <chuỗi không hợp lệ>","1. Mọi API trả 401 (hoặc 403), không trả dữ liệu, không lộ lỗi nội bộ
+2. Như bước 1 [Baseline]",,,,,Rule: AZ05 | Nguồn: 05_Security_Checklist (ASVS V4) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-12,Đăng nhập sai không lộ tài khoản có tồn tại,SEC-AU,Xác thực,SEC - Bảo mật (Common),P2,security.login đã cấu hình,"1. Đăng nhập với email không tồn tại (qa-nouser-<số ngẫu nhiên>@example.invalid)
+2. Đăng nhập với email của security.account + mật khẩu sai","1. Bị từ chối
+2. Bị từ chối với cùng status và cùng message như bước 1 [Baseline]",,,,,Rule: AU04 | Nguồn: 05_Security_Checklist (ASVS V2) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-13,Yêu cầu reset mật khẩu không lộ tài khoản có tồn tại,SEC-RS,Reset mật khẩu,SEC - Bảo mật (Common),P2,security.reset.path + security.reset.testEmail (email test nhận được mail),"1. Gửi yêu cầu reset với email không tồn tại
+2. Gửi yêu cầu reset với security.reset.testEmail","1. Response trả về bình thường
+2. Cùng status và cùng message như bước 1 [Baseline]",,,,,"Rule: RS01 | Nguồn: 05_Security_Checklist (UB#10, ASVS V2) | Tự động: HTTP | Bộ: Common"
+TC-SEC-COMMON-14,Lỗi không lộ thông tin nội bộ,SEC-IN,Kiểm tra input,SEC - Bảo mật (Common),P2,"security.login, security.me đã cấu hình","1. POST security.login với body JSON sai cú pháp
+2. GET một API không tồn tại (/api/__qa_not_found__)
+3. Đăng nhập, GET security.me?page=abc&id=2147483648","1. 4xx, không có stack trace / đường dẫn file / câu SQL
+2. 404, như bước 1
+3. 2xx hoặc 4xx (không 5xx), như bước 1 [Baseline]",,,,,Rule: IN04 | Nguồn: 05_Security_Checklist (ASVS V7) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-15,Giới hạn số lần gửi mail reset mật khẩu,SEC-RS,Reset mật khẩu,SEC - Bảo mật (Common),P2,security.reset.mailCap = ngưỡng theo đặc tả (mặc định 5); chạy sau TC-SEC-COMMON-13,1. Gửi yêu cầu reset cho security.reset.testEmail liên tục mailCap + 2 lần,1. Các lần vượt ngưỡng bị từ chối (429 hoặc message giới hạn) [Baseline],,,,,Rule: RS06 | Nguồn: 05_Security_Checklist (UB#10) | Tự động: HTTP | Bộ: Common
+TC-SEC-COMMON-16,Khóa tài khoản khi đăng nhập sai liên tiếp,SEC-AU,Xác thực,SEC - Bảo mật (Common),P1,security.lockoutAccount = tài khoản test riêng (sẽ bị khóa); security.lockout.threshold = ngưỡng theo đặc tả (mặc định 5). Chạy cuối cùng,"1. Đăng nhập sai mật khẩu threshold lần với security.lockoutAccount
+2. Đăng nhập sai thêm 1 lần
+3. Đăng nhập đúng mật khẩu","1. Bị từ chối
+2. Bị từ chối do khóa (429/423 hoặc message khóa)
+3. Vẫn bị từ chối trong thời gian khóa [Baseline]",,,,,Rule: AU03 | Nguồn: 05_Security_Checklist (UB#25) | Tự động: HTTP | Bộ: Common

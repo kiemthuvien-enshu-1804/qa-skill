@@ -139,7 +139,7 @@ Mỗi dự án một thư mục QA riêng, tách khỏi source code. Máy phải
 5. **Tự điền `.env.local`:** mật khẩu tài khoản test, vd `QA_ADMIN_A_USER` / `QA_ADMIN_A_PASS` (tên biến khớp `accounts` trong `qa-config.json`).
 6. **Kiểm tra:** nói *"chạy doctor"*, bổ sung theo báo lỗi đến khi sạch.
 7. **Bắt đầu test:** `app-testcase` (viết TC → duyệt → import TestRail, tạo Test Run) → `app-testdata` → `app-run-test` → `app-bug-backlog` (duyệt → tạo issue Backlog) → `app-verify-bug` sau khi dev fix.
-   Bảo mật (1 lần cho cả webapp, nên làm trước đợt chẩn đoán của bên thứ ba): điền khối `security` trong `qa-config.json` → `app-security-testcase` → `app-run-test` (file `e2e/SEC.run.mjs`) → `app-bug-backlog`.
+   Bảo mật (1 lần cho cả webapp, nên làm trước đợt chẩn đoán của bên thứ ba): điền khối `security` trong `qa-config.json` → chạy **bộ common 16 TC** (`scripts/sec_common.run.mjs`, không cần thiết kế) → `app-security-testcase` sinh TC riêng (phân quyền, reset, upload, input) → `app-run-test` → `app-bug-backlog`.
 8. **Commit thư mục QA** (khuyến nghị, xem [Có nên commit thư mục QA?](#có-nên-commit-thư-mục-qa)).
 
 ### Kiểm tra thư mục đã có plugin chưa
@@ -199,7 +199,7 @@ Khi plugin có bản mới, file mẫu trong thư mục QA cũ (`README.md`, `qa
 |---|---|
 | `app-qa` | điều phối toàn bộ, init/doctor thư mục QA webapp |
 | `app-testcase` | thiết kế test case từ đặc tả + mockup → TestDesign.md + TestCase.csv, import TestRail |
-| `app-security-testcase` | bộ test case bảo mật cho cả webapp theo danh mục `templates/rules/05_Security_Checklist.md` (header, cookie, xác thực, reset, phân quyền/IDOR, input, upload, CSRF — rút từ báo cáo chẩn đoán UBsecure + OWASP ASVS) → `SEC_Bao-mat_TestDesign.md` + CSV; chạy bằng `app-run-test` với helper `scripts/sec_checks.mjs` |
+| `app-security-testcase` | bảo mật theo danh mục `templates/rules/05_Security_Checklist.md` (rút từ báo cáo chẩn đoán UBsecure + OWASP ASVS): (1) **bộ common** 16 TC cố định `templates/security/SEC_Common_TestCase.csv`, chạy bằng `scripts/sec_common.run.mjs` chỉ với khối `security` trong config; (2) TC riêng của dự án (phân quyền/IDOR/tenant, mật khẩu, reset, upload, input, CSRF) → `SEC_Rieng_TestCase.csv`, chạy bằng helper `scripts/sec_checks.mjs` |
 | `app-testdata` | script SQL/API tạo dữ liệu test (TD-xx) + cleanup |
 | `app-run-test` | chạy Test Run bằng Playwright, ảnh evidence/TC, ghi kết quả lên TestRail |
 | `app-bug-backlog` | TC FAIL → bản nháp bug (ảnh khung đỏ) → duyệt → tạo issue Backlog |

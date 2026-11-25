@@ -57,12 +57,24 @@
   },
 
   "security": {
-    "_note": "Cho app-security-testcase + sec_checks.mjs (rule 05_Security_Checklist). Không bao giờ đưa production vào allowedEnvs",
+    "_note": "Bộ bảo mật common (scripts/sec_common.run.mjs) + TC riêng (app-security-testcase). Đường dẫn tương đối tính từ URL của env (thứ trình duyệt gọi, kể cả route BFF của FE). Không bao giờ đưa production vào allowedEnvs",
     "allowedEnvs": ["local", "test"],
-    "apiBase": "{url}",
+    "app": "admin",
+    "account": "admin_a",
+    "lockoutAccount": "<tài khoản test riêng cho TC khóa tài khoản — sẽ bị khóa, vd lock_a>",
     "sessionCookies": ["token", "session"],
+    "pages": { "public": "/login", "authed": "<trang HTML sau đăng nhập, vd /admin>" },
+    "login": { "_note": "API đăng nhập. body: {user} {pass} được thay. tokenPath: đường dẫn tới access token trong JSON trả về (bỏ trống nếu chỉ dùng cookie)", "path": "/api/auth/login", "method": "POST", "body": { "email": "{user}", "password": "{pass}" }, "tokenPath": "" },
+    "logout": { "path": "/api/auth/logout", "method": "POST" },
+    "me": "<API JSON trả user đang đăng nhập, vd /api/auth/me>",
+    "authApis": ["<các API GET cần đăng nhập, vd /api/auth/me>"],
+    "download": "<tuỳ chọn: URL export/tải file sau đăng nhập>",
+    "reset": { "path": "<API quên mật khẩu>", "method": "POST", "body": { "email": "{email}" }, "testEmail": "<email test>", "mailCap": 5 },
+    "lockout": { "threshold": 5 },
+    "maxSessionHours": 24,
+    "apiBase": "{url}",
     "mail": { "_note": "Tuỳ chọn: Mailpit/MailHog để đọc link reset/mời (mục RS*, RG*). Không có thì các mục đó là MANUAL", "type": "mailpit", "url": "http://localhost:8025" },
-    "accepted": { "_note": "Mục khách hàng đã chốt 'theo đặc tả / chấp nhận rủi ro' → không sinh TC. Dạng mã: lý do — người quyết định, ngày", "RS08": "<ví dụ: theo đặc tả — phía Nhật, 2026-11-20>" },
+    "accepted": { "_note": "Mục khách hàng đã chốt 'theo đặc tả / chấp nhận rủi ro' → bộ common báo '—' thay vì NG, TC riêng không sinh. Dạng mã: lý do — người quyết định, ngày", "RS08": "<ví dụ: theo đặc tả — phía Nhật, 2026-11-20>" },
     "previousReport": "<tuỳ chọn: đường dẫn báo cáo chẩn đoán bảo mật lần trước>"
   },
 

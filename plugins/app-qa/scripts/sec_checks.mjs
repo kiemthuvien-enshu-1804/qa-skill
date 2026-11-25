@@ -136,12 +136,56 @@ export async function probe(t, calls, { code = 'AZ02', api = true } = {}) {
   for (const c of calls) {
     const res = await fetch(t, c.path, { method: c.method || 'GET', data: c.data, headers: c.headers, token: c.token, api });
     const expect = c.expect || [401, 403, 404];
-    let ok = expect.includes(res.status);
+    let ok = typeof expect === 'function' ? expect(res.status) : expect.includes(res.status);
     const leak = /(\bat\s+\S+\s+\(|\.(ts|js|php|java|py):\d+|SQLSTATE|syntax error|ORA-\d+|Exception\b|Traceback)/i.test(res.text);
     if (c.noLeak !== false && leak) ok = false;
-    rows.push({ code: c.code || code, item: `${c.method || 'GET'} ${c.path}${c.label ? ` (${c.label})` : ''}`, expected: expect.join(' | ') + (c.noLeak !== false ? ', không lộ lỗi nội bộ' : ''), actual: `${res.status}${leak ? ' · LỘ LỖI NỘI BỘ' : ''} · ${cut(res.text.replace(/\s+/g, ' '), 90)}`, ok });
+    rows.push({ code: c.code || code, item: `${c.method || 'GET'} ${c.path}${c.label ? ` (${c.label})` : ''}`, expected: (c.expectLabel || (typeof expect === 'function' ? 'status hợp lệ' : expect.join(' | '))) + (c.noLeak !== false ? ', không lộ lỗi nội bộ' : ''), actual: `${res.status}${leak ? ' · LỘ LỖI NỘI BỘ' : ''} · ${cut(res.text.replace(/\s+/g, ' '), 90)}`, ok });
   }
   return rows;
+}
+
+/** Thay {user} {pass} {email} trong mọi giá trị chuỗi của body mẫu (security.login.body, security.reset.body). */
+export function fillBody(tpl, vars) {
+  const walk = (v) => (typeof v === 'string' ? v.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m)) : Array.isArray(v) ? v.map(walk) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)])) : v);
+  return walk(tpl);
+}
+
+/** Lấy user/mật khẩu của accounts[key] (mật khẩu từ env, không in ra). */
+export function creds(t, key) {
+  const a = t.cfg.accounts?.[key];
+  if (!a) throw new Error(`Không có accounts.${key} trong qa-config.json`);
+  const user = a.user || process.env[a.userEnv] || '', pass = process.env[a.passEnv] || '';
+  if (!user || !pass) throw new Error(`Thiếu user/mật khẩu của ${key} (${a.userEnv || 'user'} / ${a.passEnv})`);
+  return { user, pass };
+}
+
+const pick = (obj, p) => String(p || '').split('.').filter(Boolean).reduce((o, k) => (o == null ? o : o[k]), obj);
+
+/** Login bằng API theo security.login. Trả { res, token, ok }. Cookie phiên được lưu vào context của TC. pass ghi đè để thử sai mật khẩu. */
+export async function apiLogin(t, key, { pass, user } = {}) {
+  const L = t.cfg.security?.login;
+  if (!L?.path) throw new Error('Chưa cấu hình security.login.path');
+  const c = key ? creds(t, key) : { user: '', pass: '' };
+  const body = fillBody(L.body || { email: '{user}', password: '{pass}' }, { user: user ?? c.user, pass: pass ?? c.pass, email: user ?? c.user });
+  const res = await fetch(t, L.path, { method: L.method || 'POST', data: body });
+  let json = null; try { json = JSON.parse(res.text); } catch { /* not json */ }
+  const token = L.tokenPath && json ? pick(json, L.tokenPath) || '' : '';
+  const sessionNames = (t.cfg.security?.sessionCookies || []).map((n) => new RegExp(n, 'i'));
+  const gotCookie = res.setCookies.some((s) => sessionNames.some((re) => re.test(s.split('=')[0])));
+  return { res, json, token, ok: res.status >= 200 && res.status < 300 && (!!token || gotCookie || !L.tokenPath) };
+}
+
+/** Thời hạn JWT (giờ) từ exp - iat. Không phải JWT → null. */
+export function jwtLifetimeHours(token) {
+  const p = String(token || '').split('.');
+  if (p.length !== 3) return null;
+  try { const j = JSON.parse(Buffer.from(p[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')); return j.exp && j.iat ? (j.exp - j.iat) / 3600 : null; } catch { return null; }
+}
+
+/** So 2 response xem có lộ "tài khoản tồn tại" không (status + nội dung sau khi bỏ số/thời gian). */
+export function sameResponse(a, b) {
+  const norm = (s) => String(s || '').replace(/\d+/g, '#').replace(/"(requestId|traceId|timestamp|time)"\s*:\s*"[^"]*"/gi, '');
+  return a.status === b.status && norm(a.text) === norm(b.text);
 }
 
 /** Payload dò chuẩn (rule 05). */
@@ -155,6 +199,12 @@ export const PAYLOADS = {
 
 /** Vẽ bảng kết quả lên trang để runner chụp làm evidence; NG → t.fail(). ok=null → hiển thị "—" (bỏ qua, ghi note). */
 export async function report(t, title, rows, { request = '', note = '' } = {}) {
+  // Mục khách hàng đã chốt "theo đặc tả / chấp nhận rủi ro" (security.accepted) → không tính NG.
+  const accepted = t.cfg.security?.accepted || {};
+  for (const r of rows) {
+    const hit = String(r.code).split(/[,\s]+/).find((c) => typeof accepted[c] === 'string' && !/<[^>]*>/.test(accepted[c]));
+    if (hit && r.ok === false) { r.ok = null; r.actual = `${r.actual} → Chấp nhận: ${accepted[hit]}`; }
+  }
   const ng = rows.filter((r) => r.ok === false), skip = rows.filter((r) => r.ok === null);
   const tr = rows.map((r) => `<tr class="${r.ok === false ? 'ng' : r.ok === null ? 'na' : 'ok'}"><td>${esc(r.code)}</td><td>${esc(r.item)}</td><td>${esc(r.expected)}</td><td>${esc(r.actual)}</td><td>${r.ok === false ? 'NG' : r.ok === null ? '—' : 'OK'}</td></tr>`).join('');
   await t.page.setContent(`<!doctype html><meta charset="utf-8"><style>
