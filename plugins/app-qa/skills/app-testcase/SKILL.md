@@ -29,6 +29,14 @@ Header, cookie, login/reset, CSRF là phần chung của cả webapp, đã nằm
 
 Remarks ghi cả mã rule của chức năng và mã danh mục, ví dụ `Rule: R12, AZ03`. Bộ `SEC` chưa có thì ghi đề xuất ở Phần F.
 
+### Đổi vai / đổi tài khoản giữa luồng (bắt buộc)
+Màn hình **hiển thị dữ liệu cá nhân** (hồ sơ, đơn hàng, lịch sử, thông tin liên hệ…) hoặc **màn hoàn tất** (thanh toán xong, đăng ký xong, gửi đơn xong…) phải có **ít nhất 1 TC đổi vai / đổi tài khoản giữa luồng trong cùng một tab** (không mở tab hay trình duyệt mới). Chọn cặp đổi phù hợp với role của chức năng:
+- Khách vãng lai → đăng nhập thành viên giữa luồng.
+- Thành viên A đăng xuất → đăng nhập B.
+- Role cao → role thấp (vd admin → staff).
+
+Sau khi đổi, đi qua ít nhất một trong các đường quay lại: **`returnTo` / redirect sau login**, **F5**, **Back** của trình duyệt. Mong đợi: không còn thấy dữ liệu của tài khoản / vai trước (kể cả trong form đã điền sẵn, cache, state phía client), màn hoàn tất không hiển thị lại hay gửi lại kết quả của người trước, `returnTo` không đưa sang trang mà vai mới không có quyền. Gộp các đường `returnTo` / F5 / Back vào cùng TC khi được (≤ 6 bước), tách TC khi mong đợi khác nhau. Remarks ghi `Rule: <mã> | Đổi vai giữa luồng`. Tài liệu không nói gì về hành vi này thì vẫn viết TC và thêm câu hỏi Qxx cho `specOwner`.
+
 ## 3. Đầu ra (theo mẫu đã dùng trong `TESTCASE/`)
 - `TESTCASE/<M>_<Ten-chuc-nang>_TestDesign.md` gồm: bảng thông tin (link CSV, rule áp dụng, tài liệu nguồn kèm version/ngày, ngày lập), **0. Phạm vi** (trong / ngoài phạm vi kèm lý do, các đầu vào theo rule), **1. Dữ liệu kiểm thử TD-xx**, Phần A (rule), B (câu hỏi), D (ma trận truy vết), E (thống kê), F (đề xuất bổ sung), RTM + % coverage + requirement chưa test được + rủi ro.
 - `TESTCASE/<M>_<Ten-chuc-nang>_TestCase.csv` (Phần C): header **y hệt** CSV template trong `RULES/`, mã hoá **UTF-8 có BOM**, xuống dòng trong ô bằng `\n` và đặt ô trong ngoặc kép.
@@ -44,7 +52,7 @@ node "$S/tc_csv.mjs" check "$T/TESTCASE/<M>_TestCase.csv" --template "$T/RULES/<
 node "$S/tc_csv.mjs" trace "$T/TESTCASE/<M>_TestCase.csv"    # → Phần D
 node "$S/tc_csv.mjs" stats "$T/TESTCASE/<M>_TestCase.csv"    # → Phần E
 ```
-Có FAIL thì sửa rồi chạy lại. Sau đó trả lời 5 câu trong checklist của rule ngay trong TestDesign.md.
+Có FAIL thì sửa rồi chạy lại. Sau đó trả lời 5 câu trong checklist của rule ngay trong TestDesign.md, và tự kiểm thêm: mỗi màn có dữ liệu cá nhân / màn hoàn tất trong phạm vi đã có ít nhất 1 TC đổi vai giữa luồng chưa.
 
 ## 5. Đưa lên TestRail (chỉ khi người dùng yêu cầu)
 ```bash
