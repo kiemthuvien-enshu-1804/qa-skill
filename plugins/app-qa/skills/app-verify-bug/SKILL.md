@@ -27,7 +27,7 @@ S="${CLAUDE_PLUGIN_ROOT}/scripts"
    APPQA_ROOT="${CLAUDE_PLUGIN_ROOT}" node e2e/<M>.run.mjs --env test --out $R --suffix retest --only <TC liên quan + hồi quy> --build <build>
    ```
 6. **Mở xem ảnh**, kết luận theo nguyên tắc 3: lỗi gốc còn → FAIL; lỗi gốc hết nhưng có lỗi khác → PASS bug gốc, kèm bug mới; không làm được → BLOCKED. Vẽ ảnh bằng chứng như mục *Ảnh bằng chứng* của `app-bug-backlog` (`annotate.mjs --spec`). Bug còn lỗi: `"status": "FAIL"`, tên `<KEY>_retest_<mô tả>_FAIL.png`. Đã hết lỗi: `"status": "PASS"` (khung xanh quanh chỗ đã đúng), tên `<KEY>_retest_<mô tả>_PASS.png`. Mở ảnh xem lại trước khi đưa vào nháp.
-7. Soạn **Phần A–E** theo rule vào `BUGREPORT/Verify_<YYYYMMDD>.md`, kèm nháp comment theo mẫu 【Re-test: PASS / FAIL / Chưa thể verify】. Bug mới phát sinh thì soạn theo mẫu của `app-bug-backlog`, ghi "phát sinh khi verify <KEY>".
+7. Soạn **Phần A–E** theo rule vào `BUGREPORT/Verify_<YYYYMMDD>.md`, kèm nháp comment theo MẪU COMMENT của rule (FAIL: chỉ liệt kê ý còn sai + 「→ Nhờ @dev」, không nhắc ý đã OK / TC / bước tái hiện / build; chỉ đính kèm ảnh FAIL). Bug mới phát sinh thì soạn theo mẫu của `app-bug-backlog`, ghi "phát sinh khi verify <KEY>".
 8. **DỪNG**, chờ "Duyệt", "Duyệt trừ <KEY>" hoặc yêu cầu sửa. Chỉ bỏ qua bước chờ khi `review.verifyMode = "auto"` và bug là Minor/Trivial PASS.
 
 ## Giai đoạn 2: cập nhật (chỉ phần đã duyệt)

@@ -61,15 +61,20 @@ Bước 6. Kết luận theo nguyên tắc 3 và soạn nháp comment theo MẪU
 → Đóng bug.
 
 ## Khi FAIL
-【Re-test: FAIL】
-- Ngày verify / Môi trường / build: <...>
-- Kết quả thực tế: <hiện tượng cụ thể còn lại; nếu chỉ fix một phần thì nêu rõ phần nào
-  đã đúng, phần nào chưa>
-- Các bước tái hiện: ghi rõ bước/dữ liệu khác nếu có
+Chỉ nêu các ý CÒN SAI. Mỗi ý 1 gạch đầu dòng (giữ số điểm gốc của bug nếu bug có nhiều điểm),
+ghi **vẫn sai**, kèm thực tế (giữ nguyên chữ JA trên UI) và giá trị đúng phải là gì.
+KHÔNG ghi: các ý đã OK, ngày verify, môi trường/build, TC PASS/FAIL, bước tái hiện,
+danh sách evidence, tiêu đề 【Re-test】, dòng "Reopen".
+Ngoại lệ: chỉ ghi bước tái hiện / dữ liệu khi khác với lúc log bug.
+Chỉ đính kèm ảnh FAIL (khoanh đỏ vùng bug); không đính kèm ảnh PASS.
 
-- TC FAIL: <TC IDs>
-- Evidence: <tên file ảnh> kèm khoanh đỏ vùng bug
-→ Reopen, gán lại cho <dev>.
+Mẫu:
+ - (3) Giờ 提出日時: **vẫn sai**. Popup của QA-S04 hiển thị 「提出日時: 2026/11/19 21:29」, trong khi thời điểm nộp thực tế là 2026/11/19 12:29 JST, tức vẫn lệch +9 giờ. API `GET /api/...` vẫn trả `submittedAt = "2026-11-19T12:29:18.833Z"`.
+
+→ Nhờ @<dev> xem lại điểm (3). <nếu cần: có thể cần BE (<tên>) cùng xem ...>
+
+(Bug chỉ có 1 điểm thì bỏ số: " - <Màn hình/khu vực>: **vẫn sai**. <thực tế>, trong khi <đúng>.")
+Trạng thái / người xử lý (In Progress, gán lại dev) vẫn đổi theo Giai đoạn 2; nội dung comment chỉ theo mẫu này.
 
 ## Khi BLOCKED / CHƯA DEPLOY
 【Re-test: Chưa thể verify】
